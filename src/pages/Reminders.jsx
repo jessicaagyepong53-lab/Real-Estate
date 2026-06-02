@@ -40,6 +40,7 @@ export default function Reminders({ allUnits }) {
               <div style={{ fontSize: 12, color: C.muted }}>Lease has ended — no renewal recorded. These tenants should be contacted.</div>
             </div>
           </div>
+          <div className="tbl-wrap">
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>{["Block", "Unit", "Tenant", "Rent", "Lease Ended", "Days Over"].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
@@ -61,6 +62,7 @@ export default function Reminders({ allUnits }) {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -76,6 +78,7 @@ export default function Reminders({ allUnits }) {
         {sorted.length === 0 ? (
           <div style={{ fontSize: 13, color: C.muted }}>No active leases.</div>
         ) : (
+          <div className="tbl-wrap">
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>{["Block", "Unit", "Tenant", "Rent", "Lease End", "Days Left", "Status"].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
@@ -99,6 +102,7 @@ export default function Reminders({ allUnits }) {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

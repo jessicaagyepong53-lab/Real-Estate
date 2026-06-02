@@ -206,13 +206,13 @@ export default function Dashboard({ totalRev, occupiedUnits, allUnits, blocks, m
           const pct  = b.units.length ? Math.round((bOcc / b.units.length) * 100) : 0;
           const barCol = pct === 100 ? C.sage : pct === 0 ? C.faint : C.teal;
           return (
-            <div key={b.bid} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 0", borderBottom: `1px solid ${C.borderLight}` }}>
-              <div style={{ fontSize: 13, fontWeight: 700, minWidth: 150, color: C.text }}>{b.name}</div>
-              <div style={{ flex: 1, height: 8, background: C.panel, borderRadius: 4, overflow: "hidden", border: `1px solid ${C.borderLight}` }}>
+            <div key={b.bid} className="rev-row" style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 0", borderBottom: `1px solid ${C.borderLight}`, flexWrap: "wrap" }}>
+              <div className="rev-name" style={{ fontSize: 13, fontWeight: 700, minWidth: 150, color: C.text }}>{b.name}</div>
+              <div style={{ flex: 1, minWidth: 80, height: 8, background: C.panel, borderRadius: 4, overflow: "hidden", border: `1px solid ${C.borderLight}` }}>
                 <div style={{ width: `${pct}%`, height: "100%", background: barCol, borderRadius: 4, transition: "width 0.5s" }} />
               </div>
               <div style={{ fontSize: 12, color: C.muted, minWidth: 80, textAlign: "right" }}>{bOcc}/{b.units.length}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.gold, minWidth: 120, textAlign: "right" }}>{fmt(bRev)}/mo</div>
+              <div className="rev-amt" style={{ fontSize: 13, fontWeight: 700, color: C.gold, minWidth: 120, textAlign: "right" }}>{fmt(bRev)}/mo</div>
             </div>
           );
         })}

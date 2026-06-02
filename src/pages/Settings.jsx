@@ -208,7 +208,7 @@ export default function Settings({ requireAuth, isAuthenticated }) {
               <div style={{ fontSize: 12, color: C.muted }}>Deleted items are kept for 30 days then automatically removed.</div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div className="trash-filters" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {["all", "block", "unit", "tenant"].map(f => (
               <button key={f} onClick={() => setTypeFilter(f)} style={{ padding: "5px 13px", borderRadius: 16, border: `1px solid ${typeFilter === f ? C.teal : C.border}`, background: typeFilter === f ? C.tealBg : C.deep, color: typeFilter === f ? C.teal : C.muted, cursor: "pointer", fontSize: 11, fontFamily: "Georgia,serif", fontWeight: 600, textTransform: "capitalize" }}>
                 {f === "all" ? `All (${trash.length})` : `${TYPE_META[f].icon} ${TYPE_META[f].label}s (${trash.filter(i => i.type === f).length})`}
@@ -234,7 +234,7 @@ export default function Settings({ requireAuth, isAuthenticated }) {
 
             {/* Bulk action bar */}
             {selectedIds.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: C.tealBg, border: `1px solid ${C.teal}44`, borderRadius: 8, marginBottom: 12 }}>
+              <div className="bulk-actions" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: C.tealBg, border: `1px solid ${C.teal}44`, borderRadius: 8, marginBottom: 12, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.teal, flex: 1 }}>{selectedIds.length} item{selectedIds.length > 1 ? "s" : ""} selected</span>
                 <button
                   onClick={() => requireAuth(() => doRestore(selectedIds))}

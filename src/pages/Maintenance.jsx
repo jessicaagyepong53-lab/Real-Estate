@@ -101,7 +101,7 @@ export default function Maintenance({ maint, blocks, allUnits, requireAuth, onUp
         >
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 30, width: "90%", maxWidth: 520, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 8px 40px rgba(0,0,0,0.1)" }}>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20, color: C.teal }}>Log Maintenance Request</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="maint-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <label style={lSt}>Block</label>
                 <select style={iSt} value={newMaint.blockId} onChange={(e) => setNewMaint((p) => ({ ...p, blockId: e.target.value, unitId: "" }))}>

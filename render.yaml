@@ -2,7 +2,7 @@ services:
   - type: web
     name: estatepro-server
     runtime: node
-    buildCommand: npm install && npm run build && npm install --prefix server
+    buildCommand: npm install --include=dev && npm run build && npm install --prefix server
     startCommand: node server/index.js
     envVars:
       - key: NODE_ENV

@@ -39,8 +39,8 @@ export default function App() {
     async function init() {
       try {
         const [blocksData, maintData] = await Promise.all([fetchBlocks(), fetchMaintenance()]);
-        setBlocks(blocksData);
-        setMaint(maintData);
+        setBlocks(Array.isArray(blocksData) ? blocksData : []);
+        setMaint(Array.isArray(maintData) ? maintData : []);
       } catch {
         setApiError("Could not reach the server. Make sure the backend is running.");
       } finally {

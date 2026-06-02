@@ -5,6 +5,8 @@ import { iSt, lSt } from "../styles/shared";
 import { fmtSize } from "../utils/formatters";
 import { fileIcon } from "../utils/helpers";
 
+const API = import.meta.env.VITE_API_URL || "";
+
 export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth }) {
   const ref = useRef();
   const [drag,        setDrag]        = useState(false);
@@ -119,13 +121,25 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                                /\.(docx?|xlsx?|csv)$/i.test(doc.name || "");
 
               function viewDoc() {
-                const run = () => {
+                const run = async () => {
                   if (!doc.did) return;
-                  const proxyUrl = `/api/documents/${doc.did}/file`;
+                  const proxyUrl = `${API}/api/documents/${doc.did}/file`;
                   if (isImg) {
                     setDocViewer({ did: doc.did, url: proxyUrl, name: doc.name, isImg: true });
                   } else if (isPdf) {
-                    window.open(proxyUrl, '_blank');
+                    // Fetch as blob so auth token is sent and deployment URL is correct
+                    try {
+                      const token = localStorage.getItem("token");
+                      const res = await fetch(proxyUrl, {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {},
+                      });
+                      if (!res.ok) throw new Error("Failed to load PDF");
+                      const blob = await res.blob();
+                      const blobUrl = URL.createObjectURL(blob);
+                      window.open(blobUrl, "_blank");
+                    } catch {
+                      alert("Could not open PDF. Please try downloading it instead.");
+                    }
                   } else {
                     const gdocUrl = doc.url
                       ? `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true`
@@ -137,13 +151,25 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
               }
 
               function downloadDoc() {
-                const run = () => {
-                  const a = document.createElement('a');
-                  a.href = `/api/documents/${doc.did}/file?dl=1`;
-                  a.download = doc.name;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
+                const run = async () => {
+                  try {
+                    const token = localStorage.getItem("token");
+                    const res = await fetch(`${API}/api/documents/${doc.did}/file?dl=1`, {
+                      headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    });
+                    if (!res.ok) throw new Error("Download failed");
+                    const blob = await res.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = blobUrl;
+                    a.download = doc.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(blobUrl);
+                  } catch {
+                    alert("Download failed. Please try again.");
+                  }
                 };
                 if (requireAuth) requireAuth(run); else run();
               }
@@ -193,7 +219,7 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "#111", borderBottom: "1px solid #333", flexShrink: 0 }}>
               <span style={{ fontSize: 13, color: "#ddd", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>{docViewer.name}</span>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button onClick={() => { const run = () => { const a = document.createElement('a'); a.href = `/api/documents/${docViewer.did}/file?dl=1`; a.download = docViewer.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); }; if (requireAuth) requireAuth(run); else run(); }} style={{ background: "#2a6", border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif" }}>⬇ Download</button>
+                <button onClick={async () => { const run = async () => { try { const token = localStorage.getItem("token"); const res = await fetch(`${API}/api/documents/${docViewer.did}/file?dl=1`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }); if (!res.ok) throw new Error(); const blob = await res.blob(); const blobUrl = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = blobUrl; a.download = docViewer.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(blobUrl); } catch { alert("Download failed."); } }; if (requireAuth) requireAuth(run); else run(); }} style={{ background: "#2a6", border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif" }}>⬇ Download</button>
                 <button onClick={() => setDocViewer(null)} style={{ background: C.rose, border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 700 }}>✕ Close</button>
               </div>
             </div>

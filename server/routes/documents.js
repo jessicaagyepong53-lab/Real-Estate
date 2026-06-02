@@ -112,42 +112,22 @@ router.get('/documents/:did/file', async (req, res, next) => {
         if (d) { doc = d; break outer; }
       }
     }
-    if (!doc?.cloudinaryId || !doc?.url) return res.status(404).send('No file stored');
+    if (!doc?.url) return res.status(404).send('No file stored');
 
-    // Parse resource_type, publicId, and format from the stored URL
-    const urlMatch = doc.url.match(/cloudinary\.com\/[^/]+\/(image|video|raw)\/upload\/(?:v(\d+)\/)?(.+)$/);
-    if (!urlMatch) return res.status(500).send('Cannot parse stored Cloudinary URL');
+    const safeName = (doc.name || 'file').replace(/["/\\]/g, '');
 
-    const resourceType = urlMatch[1];
-    const rawPath      = urlMatch[3];
-    const fmtMatch     = rawPath.match(/^(.+?)\.([a-zA-Z0-9]+)$/);
-    const publicId     = fmtMatch ? fmtMatch[1] : rawPath;
-
-    // Build Admin API download URL — bypasses CDN delivery restrictions entirely.
-    // Cloudinary Admin API authenticates via timestamp+HMAC signature, always works
-    // regardless of account delivery security settings.
-    const ts      = Math.round(Date.now() / 1000);
-    const toSign  = { public_id: publicId, timestamp: ts, type: 'upload' };
-    const sig     = cloudinary.utils.api_sign_request(toSign, process.env.CLOUDINARY_API_SECRET);
-    const apiUrl  = `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/${resourceType}/download` +
-      `?public_id=${encodeURIComponent(publicId)}&type=upload&timestamp=${ts}&signature=${sig}&api_key=${process.env.CLOUDINARY_API_KEY}`;
-
-    const upstream = await fetch(apiUrl);
-    if (!upstream.ok) {
-      const body = await upstream.text().catch(() => '');
-      console.error('[proxy] Cloudinary API error', upstream.status, body.substring(0, 200));
-      return res.status(502).send(`Storage returned ${upstream.status}`);
+    if (req.query.dl === '1') {
+      // Download: fetch the public Cloudinary URL and pipe it with Content-Disposition
+      const upstream = await fetch(doc.url);
+      if (!upstream.ok) return res.status(502).send(`Storage error ${upstream.status}`);
+      const buffer = await upstream.arrayBuffer();
+      res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+      return res.send(Buffer.from(buffer));
     }
 
-    const buffer = await upstream.arrayBuffer();
-    const safeName = (doc.name || 'file').replace(/["/\\]/g, '');
-    const disposition = req.query.dl === '1'
-      ? `attachment; filename="${safeName}"`
-      : `inline; filename="${safeName}"`;
-
-    res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', disposition);
-    res.send(Buffer.from(buffer));
+    // View: redirect directly to the public Cloudinary CDN URL
+    return res.redirect(doc.url);
   } catch (err) { next(err); }
 });
 

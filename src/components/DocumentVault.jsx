@@ -139,13 +139,9 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                       });
                       if (!res.ok) throw new Error(`Server returned ${res.status}`);
                       const blob = await res.blob();
-                      const dataUrl = await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload  = () => resolve(reader.result);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(blob);
-                      });
-                      setDocViewer({ did: doc.did, url: dataUrl, name: doc.name, isImg: false, isPdf: true });
+                      // createObjectURL works in the same window context — no iframe restriction
+                      const blobUrl = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+                      setDocViewer({ did: doc.did, url: blobUrl, name: doc.name, isImg: false, isPdf: true });
                     } catch (err) {
                       setDocViewer(null);
                       alert(`Could not load PDF: ${err.message}. Try the ⬇ download button instead.`);
@@ -219,7 +215,7 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
       {/* Document viewer modal */}
       {docViewer && (
         <div
-          onClick={() => setDocViewer(null)}
+          onClick={() => { if (docViewer?.isPdf && docViewer?.url) URL.revokeObjectURL(docViewer.url); setDocViewer(null); }}
           style={{ position: "fixed", inset: 0, background: "rgba(20,20,20,0.82)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 400 }}
         >
           <div
@@ -231,7 +227,7 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
               <span style={{ fontSize: 13, color: "#ddd", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>{docViewer.name}</span>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                 <button onClick={async () => { const run = async () => { try { const token = localStorage.getItem("token"); const res = await fetch(`${API}/api/documents/${docViewer.did}/file?dl=1`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }); if (!res.ok) throw new Error(); const blob = await res.blob(); const blobUrl = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = blobUrl; a.download = docViewer.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(blobUrl); } catch { alert("Download failed."); } }; if (requireAuth) requireAuth(run); else run(); }} style={{ background: "#2a6", border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif" }}>⬇ Download</button>
-                <button onClick={() => setDocViewer(null)} style={{ background: C.rose, border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 700 }}>✕ Close</button>
+                <button onClick={() => { if (docViewer?.isPdf && docViewer?.url) URL.revokeObjectURL(docViewer.url); setDocViewer(null); }} style={{ background: C.rose, border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 700 }}>✕ Close</button>
               </div>
             </div>
             {/* Content */}
@@ -240,7 +236,7 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                 <img src={docViewer.url} alt={docViewer.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 6 }} />
               </div>
             ) : docViewer.isPdf ? (
-              <div style={{ flex: 1, background: "#fff", display: "flex", flexDirection: "column" }}>
+              <div style={{ flex: 1, background: "#fff", display: "flex", flexDirection: "column", minHeight: 0 }}>
                 {pdfLoading || !docViewer.url ? (
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, color: "#555" }}>
                     <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid #ddd", borderTopColor: "#4a9d8f", animation: "spin 0.7s linear infinite" }} />
@@ -248,10 +244,10 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                   </div>
                 ) : (
-                  <iframe
+                  <embed
                     src={docViewer.url}
-                    title={docViewer.name}
-                    style={{ flex: 1, width: "100%", height: "100%", border: "none", background: "#fff" }}
+                    type="application/pdf"
+                    style={{ flex: 1, width: "100%", height: "100%", minHeight: 0 }}
                   />
                 )}
               </div>

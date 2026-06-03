@@ -122,19 +122,36 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                                /\.(docx?|xlsx?|csv)$/i.test(doc.name || "");
 
               function viewDoc() {
-                const run = () => {
-                  if (!doc.did || !doc.url) return;
-                  // doc.url is the public Cloudinary CDN URL — use it directly, no auth needed
+                const run = async () => {
+                  if (!doc.did) return;
                   if (isImg) {
+                    // Images: use Cloudinary URL directly
                     setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: true });
                   } else if (isPdf) {
-                    // Google PDF viewer renders Cloudinary-hosted PDFs reliably in an iframe
-                    const gdocUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true`;
-                    setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false, iframeUrl: gdocUrl });
+                    // PDFs: fetch via our backend proxy → base64 → <object> tag
+                    // (Google Viewer fails on Cloudinary URLs with access restrictions)
+                    try {
+                      const token = localStorage.getItem("token");
+                      const proxyUrl = `${API}/api/documents/${doc.did}/file`;
+                      const res = await fetch(proxyUrl, {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {},
+                      });
+                      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                      const blob = await res.blob();
+                      const dataUrl = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload  = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                      });
+                      setDocViewer({ did: doc.did, url: dataUrl, name: doc.name, isImg: false, isPdf: true });
+                    } catch (err) {
+                      alert(`Could not load PDF: ${err.message}. Try downloading instead.`);
+                    }
                   } else {
-                    // Office docs: same Google Viewer approach
+                    // Office docs: Google Viewer with Cloudinary URL
                     const gdocUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true`;
-                    setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false, iframeUrl: gdocUrl });
+                    setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false, isPdf: false, iframeUrl: gdocUrl });
                   }
                 };
                 if (requireAuth) requireAuth(run); else run();
@@ -218,6 +235,21 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflow: "auto", padding: 16 }}>
                 <img src={docViewer.url} alt={docViewer.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 6 }} />
               </div>
+            ) : docViewer.isPdf ? (
+              <object
+                data={docViewer.url}
+                type="application/pdf"
+                style={{ flex: 1, width: "100%", border: "none" }}
+              >
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#ccc", gap: 12, padding: 32 }}>
+                  <div style={{ fontSize: 32 }}>📄</div>
+                  <div style={{ fontSize: 14 }}>Your browser cannot preview this PDF inline.</div>
+                  <button
+                    onClick={() => { const a = document.createElement("a"); a.href = docViewer.url; a.download = docViewer.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); }}
+                    style={{ background: "#2a6", border: "none", color: "#fff", borderRadius: 6, padding: "8px 18px", cursor: "pointer", fontSize: 13, fontFamily: "Georgia,serif" }}
+                  >⬇ Download PDF instead</button>
+                </div>
+              </object>
             ) : (
               <iframe
                 src={docViewer.iframeUrl}

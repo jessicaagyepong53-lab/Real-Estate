@@ -13,19 +13,6 @@ function monthsElapsed(start, end) {
   return Math.max(0, (cap.getFullYear() - s.getFullYear()) * 12 + (cap.getMonth() - s.getMonth()));
 }
 
-function calcUnit(u, maint) {
-  const a        = u.tenants.find((t) => t.leaseStatus === "active");
-  const months   = a ? monthsElapsed(a.leaseStart, a.leaseEnd) : 0;
-  // Use stored advanceAmount if available (actual payment), else fall back to months × rent
-  const rentPaid = a
-    ? (Number(a.advanceAmount) > 0 ? Number(a.advanceAmount) : months * u.monthlyRent)
-    : 0;
-  const depAmt   = a ? (a.depositAmount != null ? Number(a.depositAmount) : u.monthlyRent) : 0;
-  const depPaid  = a?.depositPaid ? depAmt : 0;
-  const maintCost = maint.filter((m) => m.unitId === u.uid).reduce((s, m) => s + (m.cost || 0), 0);
-  return { a, months, rentPaid, depPaid, maintCost };
-}
-
 function StatCard({ label, val, accent, accentBg }) {
   return (
     <div style={{ background: C.surface, border: `1px solid ${accent}55`, borderRadius: 12, padding: "17px 21px", position: "relative", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>

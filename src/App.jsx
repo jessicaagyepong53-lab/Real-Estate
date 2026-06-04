@@ -88,9 +88,9 @@ export default function App() {
   const dueSoonCount   = allUnits.filter((u) => { const a = u.tenants.find((t) => getLeaseStatus(t) === "active"); const d = a ? daysUntil(a.leaseEnd) : null; return d !== null && d >= 0 && d <= 30; }).length;
   const overdueCount   = expiredUnits.length;
 
-  // Security deposit totals (mirrors SecurityDeposits page calculation)
+  // Security deposit totals (mirrors SecurityDeposits page calculation — uses raw leaseStatus so expired-but-still-in tenants' held deposits are counted)
   const totalDepHeld = occupiedUnits.reduce((s, u) => {
-    const a = u.tenants.find((t) => getLeaseStatus(t) === "active");
+    const a = u.tenants.find((t) => t.leaseStatus === "active");
     if (!a || !a.depositPaid) return s;
     return s + (a.depositAmount != null ? Number(a.depositAmount) : u.monthlyRent);
   }, 0);

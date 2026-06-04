@@ -44,10 +44,13 @@ export default function SecurityDeposits({ allUnits, occupiedUnits, activeTenant
     const depAmt   = a.depositAmount != null ? Number(a.depositAmount) : u.monthlyRent;
     const paid     = getDepPaid(a);
     const rent     = Number(a.monthlyRent) || u.monthlyRent || 0;
-    // Use stored advanceAmount if available (actual payment), else fall back to calendar months × rent
-    const rentPaid = Number(a.advanceAmount) > 0
-      ? Number(a.advanceAmount)
-      : monthsElapsed(a.leaseStart, a.leaseEnd ? new Date(Math.min(new Date(a.leaseEnd), today)) : today) * rent;
+    // Payment log takes priority, then advanceAmount, then calendar fallback
+    const logTotal = (a.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    const rentPaid = logTotal > 0
+      ? logTotal
+      : Number(a.advanceAmount) > 0
+        ? Number(a.advanceAmount)
+        : monthsElapsed(a.leaseStart, a.leaseEnd ? new Date(Math.min(new Date(a.leaseEnd), today)) : today) * rent;
     const depPaid  = paid ? depAmt : 0;
     const total    = rentPaid + depPaid;
     // Months actually paid based on advance received (excludes deposit)
@@ -265,10 +268,11 @@ export default function SecurityDeposits({ allUnits, occupiedUnits, activeTenant
             </thead>
             <tbody>
               {pastDepRows.map(({ unit: u, tenant: t }) => {
-                const depAmt  = Number(t.depositAmount) || 0;
-                const rent    = Number(t.advanceAmount)  || 0;
-                const depPaid = t.depositPaid ? depAmt : 0;
-                const total   = rent + depPaid;
+                const depAmt   = Number(t.depositAmount) || 0;
+                const logTotal = (t.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
+                const rent     = logTotal > 0 ? logTotal : (Number(t.advanceAmount) || 0);
+                const depPaid  = t.depositPaid ? depAmt : 0;
+                const total    = rent + depPaid;
                 const sy = t.leaseStart ? new Date(t.leaseStart).getFullYear() : "";
                 const ey = (t.leaseEnd || t.cancelDate) ? new Date(t.leaseEnd || t.cancelDate).getFullYear() : "";
                 const period = sy && ey && sy !== ey ? `${sy}–${ey}` : `${sy}`;

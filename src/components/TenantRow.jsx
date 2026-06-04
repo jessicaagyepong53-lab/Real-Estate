@@ -62,7 +62,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
     const rent = Number(draft.monthlyRent) || 0;
     const adv  = Number(draft.advanceMonths) || 0;
     const computed = rent > 0 ? { advanceAmount: adv * rent, depositAmount: rent, depositPaid: true } : {};
-    onSave({ ...draft, ...computed, balanceOwed: Number(draft.balanceOwed) || 0 });
+    onSave({ ...draft, ...computed, balanceOwed: Number(draft.balanceOwed) || 0, refundAmount: Number(draft.refundAmount) || 0 });
     setEditing(false);
     toast("Profile saved.", "save");
   }
@@ -386,6 +386,12 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
                         <label style={lSt}>Balance Still Owed (GHS) <span style={{ color: C.faint, fontWeight: 400 }}>— 0 if fully paid</span></label>
                         <input type="number" min="0" style={iSt} value={draft.balanceOwed || ""} onChange={(e) => setDraft((p) => ({ ...p, balanceOwed: e.target.value }))} placeholder="0" />
                       </div>
+                      {(isTerminated || Number(draft.refundAmount) > 0) && (
+                        <div style={{ gridColumn: "1/-1" }}>
+                          <label style={{ ...lSt, color: C.amber }}>⛔ Refund Paid Out to Tenant (GHS) <span style={{ color: C.faint, fontWeight: 400 }}>— deducted from all totals</span></label>
+                          <input type="number" min="0" style={{ ...iSt, border: `1.5px solid ${C.amber}88` }} value={draft.refundAmount || ""} onChange={(e) => setDraft((p) => ({ ...p, refundAmount: e.target.value }))} placeholder="0" />
+                        </div>
+                      )}
                     </div>
                     {Number(draft.monthlyRent) > 0 && (() => {
                       const rent   = Number(draft.monthlyRent);

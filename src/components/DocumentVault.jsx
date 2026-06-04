@@ -122,42 +122,31 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                                /\.(docx?|xlsx?|csv)$/i.test(doc.name || "");
 
               function viewDoc() {
-                const run = async () => {
+                const run = () => {
                   if (!doc.did) return;
                   if (isImg) {
-                    // Images: use Cloudinary URL directly
+                    // Images: Cloudinary URL works fine for <img> tags
                     setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: true });
                   } else if (isPdf) {
-                    // PDFs via Google Docs Viewer — avoids Cloudinary Content-Disposition:attachment blank-page issue
-                    const gdocUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true`;
-                    setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false, iframeUrl: gdocUrl });
+                    // PDFs: backend proxy with Content-Disposition:inline — browser renders natively
+                    setDocViewer({ did: doc.did, name: doc.name, isImg: false, iframeUrl: `${API}/api/documents/${doc.did}/file` });
                   } else {
-                    // Office docs: Google Viewer with Cloudinary URL
-                    const gdocUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true`;
-                    setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false, isPdf: false, iframeUrl: gdocUrl });
+                    // Office docs: Google Docs Viewer (needs a public URL — use Cloudinary directly)
+                    setDocViewer({ did: doc.did, name: doc.name, isImg: false, iframeUrl: `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true` });
                   }
                 };
                 if (requireAuth) requireAuth(run); else run();
               }
 
               function downloadDoc() {
-                const run = async () => {
-                  try {
-                    // Fetch directly from Cloudinary — no auth needed
-                    const res = await fetch(doc.url);
-                    if (!res.ok) throw new Error("Download failed");
-                    const blob = await res.blob();
-                    const blobUrl = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = blobUrl;
-                    a.download = doc.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(blobUrl);
-                  } catch {
-                    alert("Download failed. Please try again.");
-                  }
+                const run = () => {
+                  // Backend proxy with dl=1 forces Content-Disposition:attachment with correct filename
+                  const a = document.createElement("a");
+                  a.href = `${API}/api/documents/${doc.did}/file?dl=1`;
+                  a.download = doc.name;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
                 };
                 if (requireAuth) requireAuth(run); else run();
               }
@@ -207,7 +196,7 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "#111", borderBottom: "1px solid #333", flexShrink: 0 }}>
               <span style={{ fontSize: 13, color: "#ddd", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>{docViewer.name}</span>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <a href={docViewer.url} download={docViewer.name} target="_blank" rel="noreferrer" style={{ background: "#2a6", color: "#fff", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontFamily: "Georgia,serif", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>⬇ Download</a>
+                <a href={`${API}/api/documents/${docViewer.did}/file?dl=1`} download={docViewer.name} style={{ background: "#2a6", color: "#fff", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontFamily: "Georgia,serif", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>⬇ Download</a>
                 <button onClick={() => setDocViewer(null)} style={{ background: C.rose, border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 700 }}>✕ Close</button>
               </div>
             </div>

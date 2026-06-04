@@ -114,20 +114,15 @@ router.get('/documents/:did/file', async (req, res, next) => {
     }
     if (!doc?.url) return res.status(404).send('No file stored');
 
-    const safeName = (doc.name || 'file').replace(/["/\\]/g, '');
+    const safeName = (doc.name || 'file').replace(/["\\]/g, '');
+    const disposition = req.query.dl === '1' ? 'attachment' : 'inline';
 
-    if (req.query.dl === '1') {
-      // Download: fetch the public Cloudinary URL and pipe it with Content-Disposition
-      const upstream = await fetch(doc.url);
-      if (!upstream.ok) return res.status(502).send(`Storage error ${upstream.status}`);
-      const buffer = await upstream.arrayBuffer();
-      res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
-      return res.send(Buffer.from(buffer));
-    }
-
-    // View: redirect directly to the public Cloudinary CDN URL
-    return res.redirect(doc.url);
+    const upstream = await fetch(doc.url);
+    if (!upstream.ok) return res.status(502).send(`Storage error ${upstream.status}`);
+    const buffer = await upstream.arrayBuffer();
+    res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `${disposition}; filename="${safeName}"`);
+    return res.send(Buffer.from(buffer));
   } catch (err) { next(err); }
 });
 

@@ -3,7 +3,9 @@
  * Returns a partial tenant object with any fields it could find.
  * Fields not found are omitted (caller merges only what exists).
  */
-import pdfParse from 'pdf-parse/lib/pdf-parse.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pdfParse = require('pdf-parse');
 
 // Parse a GHS amount string like "GHS 2,000" or "GH¢ 2,000" → number
 function parseGHS(str) {

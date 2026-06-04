@@ -2,7 +2,6 @@ import express from 'express';
 import multer from 'multer';
 import mongoose from 'mongoose';
 import { Readable } from 'stream';
-import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Block from '../models/Block.js';
 import { txBlock, txDoc } from '../utils/transform.js';
@@ -124,39 +123,27 @@ router.get('/documents/:did/file', async (req, res, next) => {
     }
     if (!doc?.url || !doc?.cloudinaryId) return res.status(404).send('No file stored');
 
-    // Detect resource_type from stored URL
+    // Detect resource_type and format from stored URL
     const resourceType = doc.url.includes('/video/') ? 'video'
                        : doc.url.includes('/image/') ? 'image'
                        : 'raw';
+    const urlPath    = new URL(doc.url).pathname;
+    const lastSeg    = urlPath.split('/').pop();
+    const dotIdx     = lastSeg.lastIndexOf('.');
+    const format     = dotIdx > 0 ? lastSeg.slice(dotIdx + 1) : '';
 
-    // Build a Cloudinary API download URL manually using crypto.
-    // This goes to api.cloudinary.com (not the CDN), so CDN access restrictions
-    // don't apply. The HMAC signature proves we own the account.
-    const apiKey    = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    // private_download_url uses /auto/download (the correct API endpoint) and
+    // signs the request with our API key+secret — bypasses all CDN access restrictions.
+    const signedUrl = cloudinary.utils.private_download_url(
+      doc.cloudinaryId,
+      format,
+      { resource_type: resourceType, attachment: false }
+    );
 
-    if (!apiKey || !apiSecret || !cloudName) {
-      console.error('Missing Cloudinary env vars:', { apiKey: !!apiKey, apiSecret: !!apiSecret, cloudName: !!cloudName });
-      return res.status(500).send('Server misconfiguration: Cloudinary credentials missing');
-    }
-
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const paramsToSign = `public_id=${doc.cloudinaryId}&timestamp=${timestamp}`;
-    const signature   = crypto.createHash('sha1')
-                               .update(paramsToSign + apiSecret)
-                               .digest('hex');
-
-    const apiUrl = new URL(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/download`);
-    apiUrl.searchParams.set('public_id', doc.cloudinaryId);
-    apiUrl.searchParams.set('api_key',   apiKey);
-    apiUrl.searchParams.set('timestamp', timestamp);
-    apiUrl.searchParams.set('signature', signature);
-
-    const upstream = await fetch(apiUrl.toString());
+    const upstream = await fetch(signedUrl);
     if (!upstream.ok) {
       const body = await upstream.text().catch(() => '');
-      console.error(`Cloudinary API download failed [${upstream.status}]: ${body.slice(0, 400)}`);
+      console.error(`Cloudinary download failed [${upstream.status}]: ${body.slice(0, 400)}`);
       return res.status(502).send(`Could not retrieve file (${upstream.status}): ${body.slice(0, 200)}`);
     }
 

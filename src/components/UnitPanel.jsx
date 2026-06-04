@@ -105,6 +105,7 @@ export default function UnitPanel({ unit, requireAuth, onEndLease, onSaveTenant,
               <div className="add-tenant-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[
                   { l: "Full Name *",      k: "name"             },
+                  { l: "Suffix",           k: "suffix"           },
                   { l: "Phone",            k: "phone"            },
                   { l: "Address",          k: "address"          },
                   { l: "Email",            k: "email",  t: "email" },

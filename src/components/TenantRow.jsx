@@ -124,7 +124,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
             <Avatar name={t.name} size={34} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{t.name}</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{t.name}{t.suffix && <span style={{ fontWeight: 400, fontSize: 12, color: C.muted, marginLeft: 4 }}>{t.suffix}</span>}</span>
                 <Badge label={sLabel} color={sColor} bg={sBg} />
                 {leasePeriod && <Badge label={leasePeriod} color={C.lavender} bg={C.lavBg} />}
                 {localDocs.length > 0 && (
@@ -193,7 +193,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                     <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
                       <div style={{ flex: "1 1 200px", background: C.tealBg, border: `1px solid ${C.teal}33`, borderRadius: 8, padding: "9px 13px" }}>
                         <div style={{ fontSize: 10, color: C.teal, letterSpacing: 1.1, textTransform: "uppercase", marginBottom: 6 }}>Tenant Info</div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>{t.name}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>{t.name}{t.suffix && <span style={{ fontWeight: 400, fontSize: 12, color: C.muted, marginLeft: 5 }}>{t.suffix}</span>}</div>
                         {t.phone   && <div style={{ fontSize: 13, color: C.text, marginBottom: 3 }}>📞 {t.phone}</div>}
                         {t.address && <div style={{ fontSize: 13, color: C.muted }}>📍 {t.address}</div>}
                       </div>
@@ -209,6 +209,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                     {/* Remaining fields grid */}
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(175px,1fr))", gap: "9px 18px", marginBottom: 12 }}>
                       {[
+                        ["Suffix",  t.suffix],
                         ["Email",   t.email],
                         ["Date of Birth", t.dob ? fmtDate(t.dob) : null],
                         ["Occupation",    t.occupation],

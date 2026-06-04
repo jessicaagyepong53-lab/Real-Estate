@@ -33,6 +33,7 @@ const LeaseHistorySchema = new Schema({
 
 const TenantSchema = new Schema({
   name:              String,
+  suffix:            String,
   phone:             String,
   address:           String,
   email:             String,

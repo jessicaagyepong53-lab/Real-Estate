@@ -44,6 +44,7 @@ export const UNIT_TYPES = [
 
 export const PROF_FIELDS = [
   { label: "Full Name",       key: "name"                              },
+  { label: "Suffix",          key: "suffix"                            },
   { label: "Phone",           key: "phone"                             },
   { label: "Address",         key: "address"                           },
   { label: "Email",           key: "email",            type: "email" },

@@ -47,6 +47,9 @@ const TenantSchema = new Schema({
   emergencyRelation: String,
   vehicles:          String,
   notes:             String,
+  monthlyRent:       { type: Number, default: 0 },
+  advanceMonths:     { type: Number, default: 0 },
+  advanceAmount:     { type: Number, default: 0 },
   leaseHistory:      [LeaseHistorySchema], // archived previous lease periods
   documents:         [DocumentSchema],
 }, { _id: true });

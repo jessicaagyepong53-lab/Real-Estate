@@ -159,7 +159,17 @@ router.put('/tenants/:tid', verifyJWT, async (req, res, next) => {
       if (tenant) break;
     }
     const { tid, documents, _id, ...updates } = req.body;
+    // Coerce number fields sent as strings
+    for (const f of ['monthlyRent', 'advanceMonths', 'advanceAmount', 'depositAmount']) {
+      if (updates[f] != null) updates[f] = Number(updates[f]);
+    }
     Object.assign(tenant, updates);
+    // Keep unit.monthlyRent in sync
+    if (updates.monthlyRent > 0) {
+      for (const unit of block.units) {
+        if (unit.tenants.id(req.params.tid)) { unit.monthlyRent = updates.monthlyRent; break; }
+      }
+    }
     await block.save();
     res.json(txBlock(block)); // PUT tenant
     broadcast('blocks:changed', null);

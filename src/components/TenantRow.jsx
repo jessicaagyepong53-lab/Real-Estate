@@ -53,7 +53,13 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
     return sy === ey ? `${sy}` : `${sy}–${ey}`;
   })();
 
-  function handleSave() { onSave({ ...draft }); setEditing(false); }
+  function handleSave() {
+    const rent = Number(draft.monthlyRent) || 0;
+    const adv  = Number(draft.advanceMonths) || 0;
+    const computed = rent > 0 ? { advanceAmount: adv * rent, depositAmount: rent, depositPaid: true } : {};
+    onSave({ ...draft, ...computed });
+    setEditing(false);
+  }
   function handleEndLease(reason, endDate) { onEndLease(t.tid, reason, endDate); setShowEndModal(false); }
   async function handleRenew(data) {
     try {
@@ -192,7 +198,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                         ["ID Type",       t.idType],
                         ["ID Number",     t.idNumber],
                         ["Vehicles",      t.vehicles],
-                        ["Deposit",       t.depositAmount != null ? `${t.depositPaid ? "✓ Paid" : "✗ Pending"} — GHS ${Number(t.depositAmount).toLocaleString()}` : (t.depositPaid ? "✓ Paid" : "✗ Pending")],
+                        ["Deposit",       t.depositAmount > 0 ? `${t.depositPaid ? "✓ Paid" : "✗ Pending"} — GHS ${Number(t.depositAmount).toLocaleString()}` : null],
                       ].filter(([, v]) => v).map(([l, v]) => (
                         <div key={l}>
                           <div style={{ fontSize: 10, color: C.muted, letterSpacing: 1.1, textTransform: "uppercase", marginBottom: 2 }}>{l}</div>
@@ -200,6 +206,30 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                         </div>
                       ))}
                     </div>
+
+                    {/* Rent & Financials card */}
+                    {(t.monthlyRent > 0 || t.advanceMonths > 0) && (() => {
+                      const rent   = Number(t.monthlyRent)   || 0;
+                      const adv    = Number(t.advanceMonths) || 0;
+                      const advAmt = adv * rent;
+                      const secDep = Number(t.depositAmount) || rent;
+                      const total  = advAmt + secDep;
+                      return (
+                        <div style={{ background: C.sageBg, border: `1px solid ${C.sage}33`, borderRadius: 8, padding: "9px 13px", marginBottom: 9 }}>
+                          <div style={{ fontSize: 10, color: C.sage, letterSpacing: 1.1, textTransform: "uppercase", marginBottom: 6, fontWeight: 700 }}>Rent & Financials</div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "5px 20px", fontSize: 13 }}>
+                            <span style={{ color: C.muted }}>Monthly Rent</span>
+                            <span style={{ fontWeight: 600, color: C.text, textAlign: "right" }}>GHS {rent.toLocaleString()}/mo</span>
+                            {adv > 0 && <><span style={{ color: C.muted }}>Advance Paid ({adv} month{adv !== 1 ? "s" : ""})</span><span style={{ fontWeight: 600, color: C.text, textAlign: "right" }}>GHS {advAmt.toLocaleString()}</span></>}
+                            {secDep > 0 && <><span style={{ color: C.muted }}>Security Deposit (1 month)</span><span style={{ fontWeight: 600, color: C.text, textAlign: "right" }}>{t.depositPaid ? "✓ " : "✗ "}GHS {secDep.toLocaleString()}</span></>}
+                            {adv > 0 && <>
+                              <span style={{ color: C.teal, fontWeight: 700, borderTop: `1px solid ${C.teal}33`, paddingTop: 5 }}>Total Received</span>
+                              <span style={{ color: C.teal, fontWeight: 700, textAlign: "right", borderTop: `1px solid ${C.teal}33`, paddingTop: 5 }}>GHS {total.toLocaleString()}</span>
+                            </>}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {(t.emergencyName || t.emergencyPhone) && (
                       <div style={{ background: C.lavBg, border: `1px solid ${C.lavender}33`, borderRadius: 8, padding: "9px 13px", marginBottom: 9 }}>
@@ -255,6 +285,40 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                         <textarea style={{ ...iSt, resize: "vertical", minHeight: 60 }} value={draft.notes || ""} onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))} />
                       </div>
                     </div>
+
+                    {/* Rent & Financials */}
+                    <Divider />
+                    <SLabel>Rent & Financials</SLabel>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11, marginBottom: 8 }}>
+                      <div>
+                        <label style={lSt}>Monthly Rent (GHS)</label>
+                        <input type="number" min="0" style={iSt} value={draft.monthlyRent || ""} onChange={(e) => setDraft((p) => ({ ...p, monthlyRent: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label style={lSt}>Months Advance Paid</label>
+                        <input type="number" min="0" style={iSt} value={draft.advanceMonths || ""} onChange={(e) => setDraft((p) => ({ ...p, advanceMonths: e.target.value }))} />
+                      </div>
+                    </div>
+                    {Number(draft.monthlyRent) > 0 && (() => {
+                      const rent   = Number(draft.monthlyRent);
+                      const adv    = Number(draft.advanceMonths) || 0;
+                      const advAmt = adv * rent;
+                      const total  = advAmt + rent;
+                      return (
+                        <div style={{ background: C.tealBg, border: `1px solid ${C.teal}33`, borderRadius: 8, padding: "10px 14px", marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, color: C.teal, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>Calculation Preview</div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "4px 16px", fontSize: 13, color: C.text }}>
+                            <span style={{ color: C.muted }}>Advance ({adv} month{adv !== 1 ? "s" : ""} × GHS {rent.toLocaleString()})</span>
+                            <span style={{ fontWeight: 600, textAlign: "right" }}>GHS {advAmt.toLocaleString()}</span>
+                            <span style={{ color: C.muted }}>Security Deposit (1 month — auto)</span>
+                            <span style={{ fontWeight: 600, textAlign: "right" }}>GHS {rent.toLocaleString()}</span>
+                            <span style={{ color: C.teal, fontWeight: 700, borderTop: `1px solid ${C.teal}44`, paddingTop: 4 }}>Total Received</span>
+                            <span style={{ color: C.teal, fontWeight: 700, textAlign: "right", borderTop: `1px solid ${C.teal}44`, paddingTop: 4 }}>GHS {total.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <div style={{ display: "flex", gap: 7, marginTop: 12, justifyContent: "flex-end" }}>
                       <Btn small variant="ghost" onClick={() => setEditing(false)}>Cancel</Btn>
                       <Btn small onClick={handleSave}>Save Changes</Btn>

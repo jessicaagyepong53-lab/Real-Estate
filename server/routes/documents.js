@@ -96,8 +96,12 @@ router.delete('/documents/:did', verifyJWT, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/documents/:did/file        — serve file inline (view)
-// GET /api/documents/:did/file?dl=1  — serve file as download
+// GET /api/documents/:did/file        — redirect to Cloudinary with fl_inline (view)
+// GET /api/documents/:did/file?dl=1  — redirect to Cloudinary with fl_attachment (download)
+//
+// We inject a Cloudinary delivery flag directly into the stored URL and redirect the
+// browser there. This avoids any server-side fetch (and its 401/auth issues) while
+// letting Cloudinary CDN serve the file with the correct Content-Disposition.
 router.get('/documents/:did/file', async (req, res, next) => {
   try {
     const block = await Block.findOne({
@@ -112,55 +116,19 @@ router.get('/documents/:did/file', async (req, res, next) => {
         if (d) { doc = d; break outer; }
       }
     }
-    if (!doc?.cloudinaryId && !doc?.url) return res.status(404).send('No file stored');
+    if (!doc?.url) return res.status(404).send('No file stored');
 
     const isDownload = req.query.dl === '1';
-    const safeName = (doc.name || 'file').replace(/["\\]/g, '');
 
-    // Detect resource type from the stored URL path (most reliable source of truth)
-    // URL format: https://res.cloudinary.com/CLOUD/{image|video|raw}/upload/...
-    const resTypeMatch = doc.url?.match(/\/(\w+)\/upload\//);
-    const resourceType = resTypeMatch?.[1] ||
-      (doc.mimeType?.startsWith('image/') ? 'image' :
-       doc.mimeType?.startsWith('video/') ? 'video' : 'raw');
+    // Insert the delivery flag right after /upload/ in the Cloudinary URL.
+    // fl_inline  → Content-Disposition: inline  (browser renders PDF in iframe)
+    // fl_attachment → Content-Disposition: attachment (browser saves the file)
+    const flag = isDownload ? 'fl_attachment' : 'fl_inline';
+    const deliveryUrl = doc.url.includes('/upload/')
+      ? doc.url.replace('/upload/', `/upload/${flag}/`)
+      : doc.url;
 
-    // File extension — needed for private_download_url so Cloudinary serves correct type
-    const ext = (doc.name?.split('.').pop() || '').toLowerCase();
-
-    if (doc.cloudinaryId) {
-      // private_download_url generates an authenticated API-domain URL
-      // (api.cloudinary.com) that works regardless of CDN signed-delivery settings.
-      const expires = Math.floor(Date.now() / 1000) + 600;
-      const authUrl = cloudinary.utils.private_download_url(
-        doc.cloudinaryId,
-        ext,
-        { resource_type: resourceType, expires_at: expires },
-      );
-
-      if (isDownload) {
-        // For download: just redirect — browser follows to Cloudinary API and saves the file
-        return res.redirect(302, authUrl);
-      }
-
-      // For inline view: proxy the bytes so we can force Content-Disposition:inline
-      // (private_download_url always sends attachment by default)
-      const upstream = await fetch(authUrl);
-      if (!upstream.ok) return res.status(502).send(`Storage error ${upstream.status}`);
-      const buffer = await upstream.arrayBuffer();
-      res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
-      res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
-      res.setHeader('Cache-Control', 'private, max-age=300');
-      return res.send(Buffer.from(buffer));
-    }
-
-    // Fallback for legacy docs that only have a plain URL (no cloudinaryId)
-    const upstream = await fetch(doc.url);
-    if (!upstream.ok) return res.status(502).send(`Storage error ${upstream.status}`);
-    const buffer = await upstream.arrayBuffer();
-    const disposition = isDownload ? 'attachment' : 'inline';
-    res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `${disposition}; filename="${safeName}"`);
-    return res.send(Buffer.from(buffer));
+    return res.redirect(302, deliveryUrl);
   } catch (err) { next(err); }
 });
 

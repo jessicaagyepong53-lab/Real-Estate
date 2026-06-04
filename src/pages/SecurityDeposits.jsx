@@ -78,7 +78,20 @@ export default function SecurityDeposits({ allUnits, occupiedUnits, activeTenant
   // Past deposit totals
   const pastDepCollected = pastDepRows.reduce((s, { tenant: t }) => s + (t.depositPaid ? Number(t.depositAmount) || 0 : 0), 0);
   const pastDepPending   = pastDepRows.reduce((s, { tenant: t }) => s + (!t.depositPaid ? Number(t.depositAmount) || 0 : 0), 0);
+  const pastDepTotal     = pastDepRows.reduce((s, { tenant: t }) => s + (Number(t.depositAmount) || 0), 0);
   const allTimeDepCollected = totalDepHeld + pastDepCollected;
+
+  // Active deposit totals (all active tenants, paid or not)
+  const activeDepTotal   = activeRows.reduce((s, u) => {
+    const a = u.tenants.find((t) => t.leaseStatus === "active");
+    return s + (a ? (a.depositAmount != null ? Number(a.depositAmount) : u.monthlyRent) : 0);
+  }, 0);
+  const activeDepPending = activeDepTotal - totalDepHeld;
+
+  // Grand overall totals (active + past)
+  const grandDepTotal     = activeDepTotal + pastDepTotal;
+  const grandDepCollected = totalDepHeld + pastDepCollected;
+  const grandDepPending   = activeDepPending + pastDepPending;
 
   function startEdit(uid, currentAmt) {
     setEditing((p) => ({ ...p, [uid]: String(currentAmt) }));
@@ -118,6 +131,29 @@ export default function SecurityDeposits({ allUnits, occupiedUnits, activeTenant
             <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 4 }}>{s.l}</div>
           </div>
         ))}
+      </div>
+
+      {/* ── Overall Grand Total Banner ── */}
+      <div style={{ background: C.surface, border: `2px solid ${C.gold}55`, borderRadius: 12, padding: "16px 22px", marginBottom: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+        <div style={{ fontSize: 11, color: C.gold, letterSpacing: 1.4, textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>📊 Overall Security Deposit Summary (All Tenants)</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "10px 24px" }}>
+          {[
+            { l: "Total Deposits Expected",  v: fmt(grandDepTotal),     c: C.text    },
+            { l: "Total Collected",          v: fmt(grandDepCollected), c: C.sage    },
+            { l: "Total Pending",            v: fmt(grandDepPending),   c: grandDepPending > 0 ? C.rose : C.sage },
+            { l: "Active Deposits Expected", v: fmt(activeDepTotal),    c: C.lavender },
+            { l: "Active Collected",         v: fmt(totalDepHeld),      c: C.sage    },
+            { l: "Active Pending",           v: fmt(activeDepPending),  c: activeDepPending > 0 ? C.amber : C.sage },
+            { l: "Past Deposits Expected",   v: fmt(pastDepTotal),      c: C.lavender },
+            { l: "Past Collected",           v: fmt(pastDepCollected),  c: C.sage    },
+            { l: "Past Pending",             v: fmt(pastDepPending),    c: pastDepPending > 0 ? C.rose : C.sage },
+          ].map(({ l, v, c }) => (
+            <div key={l}>
+              <div style={{ fontSize: 10, color: C.muted, letterSpacing: 1.1, textTransform: "uppercase", marginBottom: 2 }}>{l}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: c }}>{v}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Deposits table */}

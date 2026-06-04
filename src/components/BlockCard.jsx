@@ -9,7 +9,7 @@ import Badge from "./ui/Badge";
 import SLabel from "./ui/SLabel";
 import UnitPanel from "./UnitPanel";
 
-export default function BlockCard({ block, requireAuth, onEndLease, onSaveTenant, onAddTenant, onAddUnit, onDeleteUnit, onDeleteBlock, onRenew }) {
+export default function BlockCard({ block, requireAuth, onEndLease, onTerminateLease, onSaveTenant, onAddTenant, onAddUnit, onDeleteUnit, onDeleteBlock, onRenew }) {
   const [open, setOpen] = useState(false);
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [newU, setNewU] = useState({ name: "", type: "1-Bedroom", monthlyRent: "" });
@@ -103,6 +103,7 @@ export default function BlockCard({ block, requireAuth, onEndLease, onSaveTenant
                 unit={u}
                 requireAuth={requireAuth}
                 onEndLease={onEndLease}
+                onTerminateLease={onTerminateLease}
                 onSaveTenant={onSaveTenant}
                 onAddTenant={onAddTenant}
                 onDeleteUnit={onDeleteUnit}

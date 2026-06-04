@@ -5,7 +5,7 @@ import Btn from "../components/ui/Btn";
 import BlockCard from "../components/BlockCard";
 import { getLeaseStatus } from "../utils/helpers";
 
-function PropertyGroup({ address, blocks, requireAuth, onEndLease, onSaveTenant, onAddTenant, onAddUnit, onDeleteUnit, onDeleteBlock, onRenew }) {
+function PropertyGroup({ address, blocks, requireAuth, onEndLease, onTerminateLease, onSaveTenant, onAddTenant, onAddUnit, onDeleteUnit, onDeleteBlock, onRenew }) {
   const [open, setOpen] = useState(true);
   const totalUnits = blocks.reduce((s, b) => s + b.units.length, 0);
   const occUnits   = blocks.reduce((s, b) => s + b.units.filter(u => u.tenants.some(t => getLeaseStatus(t) === "active")).length, 0);
@@ -34,6 +34,7 @@ function PropertyGroup({ address, blocks, requireAuth, onEndLease, onSaveTenant,
               block={b}
               requireAuth={requireAuth}
               onEndLease={onEndLease}
+              onTerminateLease={onTerminateLease}
               onSaveTenant={onSaveTenant}
               onAddTenant={onAddTenant}
               onAddUnit={onAddUnit}
@@ -48,7 +49,7 @@ function PropertyGroup({ address, blocks, requireAuth, onEndLease, onSaveTenant,
   );
 }
 
-export default function Properties({ blocks, requireAuth, onEndLease, onSaveTenant, onAddTenant, onAddUnit, onDeleteUnit, onDeleteBlock, onAddBlock, onRenew }) {
+export default function Properties({ blocks, requireAuth, onEndLease, onTerminateLease, onSaveTenant, onAddTenant, onAddUnit, onDeleteUnit, onDeleteBlock, onAddBlock, onRenew }) {
   const [showAddBlock, setShowAddBlock] = useState(false);
   const [newBlock, setNewBlock] = useState({ name: "", type: "block", address: "" });
 
@@ -85,6 +86,7 @@ export default function Properties({ blocks, requireAuth, onEndLease, onSaveTena
           blocks={g.blocks}
           requireAuth={requireAuth}
           onEndLease={onEndLease}
+          onTerminateLease={onTerminateLease}
           onSaveTenant={onSaveTenant}
           onAddTenant={onAddTenant}
           onAddUnit={onAddUnit}

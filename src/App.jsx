@@ -53,7 +53,9 @@ export default function App() {
     init();
 
     // ── Real-time sync ─────────────────────────────────────────────────────
-    const socket = io('/');
+    // Connect directly to the backend (not via Vercel proxy) so WebSockets work
+    const socketUrl = (import.meta.env.VITE_API_URL || "").replace(/\/api\/?$/, "") || "/";
+    const socket = io(socketUrl, { transports: ["websocket", "polling"] });
     socket.on('blocks:changed', async () => {
       try { setBlocks(await fetchBlocks()); } catch { /* network hiccup */ }
     });
@@ -74,9 +76,13 @@ export default function App() {
   const allTenants = allUnits.flatMap((u) => u.tenants.map((t) => ({ ...t, unitId: u.uid, unitName: u.name, blockName: u.blockName, monthlyRent: u.monthlyRent })));
   // Use getLeaseStatus so tenants with a past leaseEnd are treated as expired, not active
   const activeTenants  = allTenants.filter((t) => getLeaseStatus(t) === "active");
-  const occupiedUnits  = allUnits.filter((u) => u.tenants.some((t) => getLeaseStatus(t) === "active"));
-  const expiredUnits   = allUnits.filter((u) => !u.tenants.some((t) => getLeaseStatus(t) === "active") && u.tenants.some((t) => t.leaseStatus === "active"));
-  const totalRev       = occupiedUnits.reduce((s, u) => { const a = u.tenants.find((t) => getLeaseStatus(t) === "active"); return s + (a ? u.monthlyRent : 0); }, 0);
+  // occupied = has a tenant whose DB status is 'active' (includes expired-but-still-in)
+  const occupiedUnits  = allUnits.filter((u) => u.tenants.some((t) => t.leaseStatus === "active"));
+  const expiredUnits   = allUnits.filter((u) => u.tenants.some((t) => t.leaseStatus === "active" && t.leaseEnd && new Date(t.leaseEnd) < today));
+  // Monthly revenue = sum of all active tenants' rent (including expired leases still occupying)
+  const totalRev          = occupiedUnits.reduce((s, u) => { const a = u.tenants.find((t) => t.leaseStatus === "active"); return s + (a ? (Number(a.monthlyRent) || u.monthlyRent) : 0); }, 0);
+  // All-time monthly rent total = every tenant (past + active) summed
+  const totalMonthlyRent  = allUnits.reduce((s, u) => s + u.tenants.reduce((ts, t) => ts + (Number(t.monthlyRent) || u.monthlyRent || 0), 0), 0);
   const allYears       = [...new Set(allTenants.flatMap((t) => [yr(t.leaseStart), yr(t.leaseEnd), yr(t.cancelDate)]).filter(Boolean))].sort();
   const reminderUnits  = allUnits.filter((u) => { const a = u.tenants.find((t) => getLeaseStatus(t) === "active"); return a && daysUntil(a.leaseEnd) !== null && daysUntil(a.leaseEnd) <= 90; });
   const dueSoonCount   = allUnits.filter((u) => { const a = u.tenants.find((t) => getLeaseStatus(t) === "active"); const d = a ? daysUntil(a.leaseEnd) : null; return d !== null && d >= 0 && d <= 30; }).length;
@@ -88,6 +94,7 @@ export default function App() {
     if (!a || !a.depositPaid) return s;
     return s + (a.depositAmount != null ? Number(a.depositAmount) : u.monthlyRent);
   }, 0);
+  const totalRefunds  = allTenants.reduce((s, t) => s + (Number(t.refundAmount) || 0), 0);
   const totalRentPaid = allTenants.reduce((s, t) => {
     if (Number(t.advanceAmount) > 0) return s + Number(t.advanceAmount);
     if (!t.leaseStart) return s;
@@ -95,7 +102,7 @@ export default function App() {
     const cap    = t.leaseEnd ? new Date(Math.min(new Date(t.leaseEnd), today)) : today;
     const months = Math.max(0, (cap.getFullYear() - start.getFullYear()) * 12 + (cap.getMonth() - start.getMonth()));
     return s + months * (Number(t.monthlyRent) || 0);
-  }, 0);
+  }, 0) - totalRefunds;
 
   const filteredTenants = allTenants.filter((t) => {
     if (!filterYA) return true;
@@ -116,6 +123,19 @@ export default function App() {
     });
     setBlocks((prev) => prev.map((b) => b.bid === block.bid ? block : b));
     toast("Lease ended successfully.", "lease");
+  }
+
+  async function terminateLease(unitId, tid, reason, endDate, refundAmount) {
+    const block = await apiUpdateTenant(tid, {
+      leaseStatus: "cancelled",
+      cancelReason: `[TERMINATED] ${reason}`,
+      cancelDate: endDate || today.toISOString().slice(0, 10),
+      leaseEnd: endDate || undefined,
+      refundAmount: Number(refundAmount) || 0,
+    });
+    setBlocks((prev) => prev.map((b) => b.bid === block.bid ? block : b));
+    const refund = Number(refundAmount) || 0;
+    toast(`Tenancy terminated.${refund > 0 ? ` GHS ${refund.toLocaleString()} refund recorded.` : ""}`, "lease");
   }
 
   async function saveTenant(unitId, updated) {
@@ -315,6 +335,7 @@ export default function App() {
         {tab === "Dashboard" && (
           <Dashboard
             totalRev={totalRev}
+            totalMonthlyRent={totalMonthlyRent}
             occupiedUnits={occupiedUnits}
             allUnits={allUnits}
             blocks={blocks}
@@ -340,6 +361,7 @@ export default function App() {
             blocks={blocks}
             requireAuth={requireAuth}
             onEndLease={withAuth(endLease)}
+            onTerminateLease={withAuth(terminateLease)}
             onSaveTenant={withAuth(saveTenant)}
             onAddTenant={withAuth(addTenant)}
             onAddUnit={withAuth(addUnit)}

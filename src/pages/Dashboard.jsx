@@ -42,7 +42,7 @@ const selSt = {
   padding: "8px 12px", color: C.text, fontSize: 13, fontFamily: "Georgia,serif", cursor: "pointer",
 };
 
-export default function Dashboard({ totalRev, occupiedUnits, allUnits, blocks, maint, dueSoonCount, overdueCount, reminderUnits, totalRentPaid, totalDepHeld, onRecordPayment }) {
+export default function Dashboard({ totalRev, totalMonthlyRent, occupiedUnits, allUnits, blocks, maint, dueSoonCount, overdueCount, reminderUnits, totalRentPaid, totalDepHeld, onRecordPayment }) {
   const [filterBlock, setFilterBlock] = useState("");
   const [filterUnit,  setFilterUnit]  = useState("");
   const [payInput,    setPayInput]    = useState({}); // tid → input string
@@ -78,8 +78,9 @@ export default function Dashboard({ totalRev, occupiedUnits, allUnits, blocks, m
     <>
       {/* ── Global stat cards ── */}
       <div className="stat-grid" style={sGrid}>
-        <StatCard label="Monthly Revenue"     val={fmt(totalRev)}                                  accent={C.gold}     accentBg={C.goldBg}  />
-        <StatCard label="Annual Revenue"      val={fmt(totalRev * 12)}                             accent={C.sky}      accentBg={C.skyBg}   />
+        <StatCard label="Current Monthly Revenue"  val={fmt(totalRev)}                                  accent={C.gold}     accentBg={C.goldBg}  />
+        <StatCard label="Total Monthly Rent (All)"  val={fmt(totalMonthlyRent)}                          accent={C.teal}     accentBg={C.tealBg}  />
+        <StatCard label="Annual Revenue"            val={fmt(totalRev * 12)}                             accent={C.sky}      accentBg={C.skyBg}   />
         <StatCard label="Occupied Units"      val={`${occupiedUnits.length}/${allUnits.length}`}   accent={C.sage}     accentBg={C.sageBg}  />
         <StatCard label="Blocks / Properties" val={blocks.length}                                  accent={C.lavender} accentBg={C.lavBg}   />
         <StatCard label="Pending Maintenance" val={maint.filter((m) => m.status === "Pending").length} accent={C.rose} accentBg={C.roseBg} />
@@ -193,7 +194,7 @@ export default function Dashboard({ totalRev, occupiedUnits, allUnits, blocks, m
               <tfoot>
                 <tr style={{ background: C.panel }}>
                   <td style={{ ...td, fontWeight: 700, color: C.text }} colSpan={2}>Totals</td>
-                  <td style={{ ...td, fontWeight: 700 }}>{fmt(scopeUnits.reduce((s, u) => s + u.monthlyRent, 0))}</td>
+                  <td style={{ ...td, fontWeight: 700 }}>{fmt(scopeUnits.reduce((s, u) => s + u.tenants.reduce((ts, t) => ts + (Number(t.monthlyRent) || u.monthlyRent || 0), 0), 0))}</td>
                   <td style={{ ...td, fontWeight: 700, color: C.teal }}>{fmt(scopeTotals.rentPaid)}</td>
                   <td style={{ ...td, fontWeight: 700, color: C.gold }}>{fmt(scopeTotals.depPaid)}</td>
                   <td style={{ ...td, fontWeight: 700 }}>{fmt(scopeTotals.rentPaid + scopeTotals.depPaid)}</td>

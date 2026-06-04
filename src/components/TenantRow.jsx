@@ -14,30 +14,33 @@ import SLabel from "./ui/SLabel";
 import Divider from "./ui/Divider";
 import EndLeaseModal from "./EndLeaseModal";
 import RenewLeaseModal from "./RenewLeaseModal";
+import TerminateLeaseModal from "./TerminateLeaseModal";
 import DocumentVault from "./DocumentVault";
 
-export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSave, onRenew }) {
+export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTerminateLease, onSave, onRenew }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ ...t });
-  const [showEndModal,   setShowEndModal]   = useState(false);
-  const [showRenewModal, setShowRenewModal] = useState(false);
+  const [showEndModal,       setShowEndModal]       = useState(false);
+  const [showRenewModal,     setShowRenewModal]     = useState(false);
+  const [showTerminateModal, setShowTerminateModal] = useState(false);
   const [localDocs, setLocalDocs] = useState(t.documents || []);
 
   const effStatus = getLeaseStatus(t); // 'active' | 'expired' | 'ended' | 'cancelled'
   const isExpired = effStatus === 'expired';
+  const isTerminated = t.leaseStatus === 'cancelled' && t.cancelReason?.startsWith('[TERMINATED]');
 
   const sColor = isCurrent
     ? (isExpired ? C.amber  : C.sage)
-    : (t.leaseStatus === "cancelled" ? C.rose : C.muted);
+    : (isTerminated ? C.rose : t.leaseStatus === "cancelled" ? C.rose : C.muted);
   const sBg    = isCurrent
     ? (isExpired ? C.amberBg : C.sageBg)
-    : (t.leaseStatus === "cancelled" ? C.roseBg : "#f5f0eb");
+    : (isTerminated ? C.roseBg : t.leaseStatus === "cancelled" ? C.roseBg : "#f5f0eb");
   const sLabel = isCurrent
     ? (isExpired ? "Expired" : "Active")
-    : (t.leaseStatus === "cancelled" ? "Cancelled" : "Past");
+    : (isTerminated ? "Terminated" : t.leaseStatus === "cancelled" ? "Cancelled" : "Past");
 
   const dur = (() => {
     const s = new Date(t.leaseStart);
@@ -64,6 +67,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
     toast("Profile saved.", "save");
   }
   function handleEndLease(reason, endDate) { onEndLease(t.tid, reason, endDate); setShowEndModal(false); }
+  function handleTerminateLease(reason, endDate, refundAmount) { onTerminateLease(t.tid, reason, endDate, refundAmount); setShowTerminateModal(false); }
   async function handleRenew(data) {
     try {
       const block = await renewTenant(t.tid, data);
@@ -113,8 +117,9 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
 
   return (
     <>
-      {showEndModal   && <EndLeaseModal   tenantName={t.name} onConfirm={handleEndLease} onClose={() => setShowEndModal(false)} />}
-      {showRenewModal && <RenewLeaseModal tenantName={t.name} currentLeaseEnd={t.leaseEnd} currentMonthlyRent={t.monthlyRent} onConfirm={handleRenew} onClose={() => setShowRenewModal(false)} />}
+      {showEndModal       && <EndLeaseModal       tenantName={t.name} onConfirm={handleEndLease}      onClose={() => setShowEndModal(false)} />}
+      {showRenewModal     && <RenewLeaseModal     tenantName={t.name} currentLeaseEnd={t.leaseEnd} currentMonthlyRent={t.monthlyRent} onConfirm={handleRenew} onClose={() => setShowRenewModal(false)} />}
+      {showTerminateModal && <TerminateLeaseModal tenantName={t.name} onConfirm={handleTerminateLease} onClose={() => setShowTerminateModal(false)} />}
 
       <div style={{ background: isCurrent ? "#fff" : C.panel, border: `1px solid ${isCurrent ? C.border : C.borderLight}`, borderRadius: 10, marginBottom: 7, overflow: "hidden", boxShadow: isCurrent ? "0 1px 6px rgba(74,157,143,0.08)" : "none" }}>
 
@@ -158,9 +163,17 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                 </button>
               )}
               <button
-                onClick={(e) => { e.stopPropagation(); requireAuth(() => setShowEndModal(true)); }}
+                onClick={(e) => { e.stopPropagation(); requireAuth(() => setShowTerminateModal(true)); }}
                 style={{ padding: "7px 14px", borderRadius: 8, border: `2px solid ${C.rose}`, background: "#fff", color: C.rose, cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 700, letterSpacing: 0.3, whiteSpace: "nowrap", transition: "background 0.15s" }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = C.roseBg)}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+              >
+                ⛔ Terminate
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); requireAuth(() => setShowEndModal(true)); }}
+                style={{ padding: "7px 14px", borderRadius: 8, border: `2px solid ${C.border}`, background: "#fff", color: C.muted, cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 700, letterSpacing: 0.3, whiteSpace: "nowrap", transition: "background 0.15s" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = C.panel)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
               >
                 ✕ End Lease
@@ -253,6 +266,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                             {balance > 0 && <><span style={{ color: C.rose, fontWeight: 700 }}>Balance Owed</span><span style={{ color: C.rose, fontWeight: 700, textAlign: "right" }}>GHS {balance.toLocaleString()}</span></>}
                             {balance > 0 && <><span style={{ color: C.sage, fontWeight: 700 }}>Amount Received</span><span style={{ color: C.sage, fontWeight: 700, textAlign: "right" }}>GHS {received.toLocaleString()}</span></>}
                             {t.lastPaymentDate && <><span style={{ color: C.muted }}>Last Payment</span><span style={{ color: C.sage, textAlign: "right" }}>GHS {(Number(t.lastPaymentAmount)||0).toLocaleString()} — {t.lastPaymentDate}</span></>}
+                            {Number(t.refundAmount) > 0 && <><span style={{ color: C.amber, fontWeight: 700, borderTop: `1px solid ${C.amber}33`, paddingTop: 5 }}>⛔ Refund Paid Out</span><span style={{ color: C.amber, fontWeight: 700, textAlign: "right", borderTop: `1px solid ${C.amber}33`, paddingTop: 5 }}>− GHS {Number(t.refundAmount).toLocaleString()}</span></>}
                           </div>
                         </div>
                       );
@@ -267,10 +281,12 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                     )}
 
                     {!isCurrent && t.cancelReason && (
-                      <div style={{ background: C.roseBg, border: `1px solid ${C.rose}33`, borderRadius: 8, padding: "9px 13px", marginTop: 9 }}>
-                        <div style={{ fontSize: 10, color: C.rose, letterSpacing: 1.1, textTransform: "uppercase", marginBottom: 3 }}>Lease Ended — Reason</div>
-                        <div style={{ fontSize: 13, color: C.text }}>{t.cancelReason}</div>
-                        {t.cancelDate && <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>Ended on {fmtDate(t.cancelDate)}</div>}
+                      <div style={{ background: isTerminated ? C.roseBg : C.roseBg, border: `1px solid ${C.rose}33`, borderRadius: 8, padding: "9px 13px", marginTop: 9 }}>
+                        <div style={{ fontSize: 10, color: C.rose, letterSpacing: 1.1, textTransform: "uppercase", marginBottom: 3 }}>
+                          {isTerminated ? "⛔ Tenancy Terminated" : "Lease Ended — Reason"}
+                        </div>
+                        <div style={{ fontSize: 13, color: C.text }}>{isTerminated ? t.cancelReason.replace(/^\[TERMINATED\]\s*/, "") : t.cancelReason}</div>
+                        {t.cancelDate && <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{isTerminated ? "Terminated" : "Ended"} on {fmtDate(t.cancelDate)}</div>}
                       </div>
                     )}
 

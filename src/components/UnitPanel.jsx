@@ -17,7 +17,7 @@ const emptyNewT = {
   vehicles: "", notes: "", depositPaid: false, depositAmount: "", documents: [],
 };
 
-export default function UnitPanel({ unit, requireAuth, onEndLease, onSaveTenant, onAddTenant, onDeleteUnit, onRenew }) {
+export default function UnitPanel({ unit, requireAuth, onEndLease, onTerminateLease, onSaveTenant, onAddTenant, onDeleteUnit, onRenew }) {
   const [open, setOpen] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [newT, setNewT] = useState(emptyNewT);
@@ -37,7 +37,22 @@ export default function UnitPanel({ unit, requireAuth, onEndLease, onSaveTenant,
 
   function saveNew() {
     if (!newT.name || !newT.leaseStart) return;
-    onAddTenant(unit.uid, { ...newT, tid: `t${unit.uid}-${Date.now()}`, leaseStatus: "active", cancelReason: "", cancelDate: "", moveInDate: newT.leaseStart, depositAmount: Number(newT.depositAmount) || 0 });
+    const rent     = Number(newT.monthlyRent)   || 0;
+    const advMonths = Number(newT.advanceMonths) || 0;
+    const advAmt   = Number(newT.advanceAmount)  || (advMonths * rent);
+    onAddTenant(unit.uid, {
+      ...newT,
+      tid:           `t${unit.uid}-${Date.now()}`,
+      leaseStatus:   "active",
+      cancelReason:  "",
+      cancelDate:    "",
+      moveInDate:    newT.leaseStart,
+      depositAmount: Number(newT.depositAmount) || 0,
+      monthlyRent:   rent,
+      advanceMonths: advMonths,
+      advanceAmount: advAmt,
+      balanceOwed:   Number(newT.balanceOwed)   || 0,
+    });
     setNewT(emptyNewT);
     setShowAdd(false);
   }
@@ -89,6 +104,7 @@ export default function UnitPanel({ unit, requireAuth, onEndLease, onSaveTenant,
               isCurrent
               requireAuth={requireAuth}
               onEndLease={(tid, reason, endDate) => onEndLease(unit.uid, tid, reason, endDate)}
+              onTerminateLease={(tid, reason, endDate, refundAmount) => onTerminateLease(unit.uid, tid, reason, endDate, refundAmount)}
               onSave={(u) => onSaveTenant(unit.uid, u)}
               onRenew={onRenew}
             />
@@ -136,11 +152,28 @@ export default function UnitPanel({ unit, requireAuth, onEndLease, onSaveTenant,
                 </div>
                 <div>
                   <label style={lSt}>Deposit Amount (GHS)</label>
-                  <input type="number" min="0" style={iSt} placeholder="e.g. 2800" value={newT.depositAmount} onChange={(e) => setNewT((p) => ({ ...p, depositAmount: e.target.value }))} />
+                  <input type="number" min="0" style={iSt} placeholder="e.g. 2500" value={newT.depositAmount} onChange={(e) => setNewT((p) => ({ ...p, depositAmount: e.target.value }))} />
+                </div>
+                <div />
+                {/* Rent & Financials */}
+                <div style={{ gridColumn: "1/-1", marginTop: 4 }}>
+                  <div style={{ fontSize: 10, color: C.sage, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 700, marginBottom: 8, borderTop: `1px solid ${C.sage}33`, paddingTop: 10 }}>Rent &amp; Financials</div>
                 </div>
                 <div>
-                  <label style={lSt}>Deposit Amount (GHS)</label>
-                  <input type="number" min="0" style={iSt} placeholder="e.g. 2800" value={newT.depositAmount} onChange={(e) => setNewT((p) => ({ ...p, depositAmount: e.target.value }))} />
+                  <label style={lSt}>Monthly Rent (GHS)</label>
+                  <input type="number" min="0" style={iSt} placeholder="e.g. 2500" value={newT.monthlyRent || ""} onChange={(e) => setNewT((p) => ({ ...p, monthlyRent: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={lSt}>Advance Months</label>
+                  <input type="number" min="0" style={iSt} placeholder="e.g. 12" value={newT.advanceMonths || ""} onChange={(e) => setNewT((p) => ({ ...p, advanceMonths: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={lSt}>Advance Amount (GHS)</label>
+                  <input type="number" min="0" style={iSt} placeholder="Auto: months × rent" value={newT.advanceAmount || ""} onChange={(e) => setNewT((p) => ({ ...p, advanceAmount: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={lSt}>Balance Owed (GHS)</label>
+                  <input type="number" min="0" style={iSt} placeholder="e.g. 0" value={newT.balanceOwed || ""} onChange={(e) => setNewT((p) => ({ ...p, balanceOwed: e.target.value }))} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 7, marginTop: 12, justifyContent: "flex-end" }}>

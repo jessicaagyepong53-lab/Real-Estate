@@ -5,7 +5,8 @@ import { iSt, lSt } from "../styles/shared";
 import { fmtSize } from "../utils/formatters";
 import { fileIcon } from "../utils/helpers";
 
-const API = import.meta.env.VITE_API_URL || "";
+// Strip trailing /api so we can always append /api/... safely
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/api\/?$/, "");
 
 // Infer document category from filename keywords
 function guessCategoryFromName(name) {
@@ -138,9 +139,7 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                 const run = () => {
                   if (!doc.did) return;
                   const token = localStorage.getItem("estatepro_token") || "";
-                  // API may already include /api — build URL without duplicating it
-                  const base = (import.meta.env.VITE_API_URL || "").replace(/\/api\/?$/, "");
-                  const proxyUrl = `${base}/api/documents/${doc.did}/file?token=${encodeURIComponent(token)}`;
+                  const proxyUrl = `${API_BASE}/api/documents/${doc.did}/file?token=${encodeURIComponent(token)}`;
                   if (isOffice) {
                     const msUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(proxyUrl)}`;
                     setDocViewer({ did: doc.did, name: doc.name, isImg: false, iframeUrl: msUrl, proxyUrl });
@@ -155,7 +154,7 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                 const run = async () => {
                   try {
                     const token = localStorage.getItem("estatepro_token") || "";
-                    const res = await fetch(`${API}/api/documents/${doc.did}/file?dl=1`, {
+                    const res = await fetch(`${API_BASE}/api/documents/${doc.did}/file?dl=1`, {
                       headers: { Authorization: `Bearer ${token}` },
                     });
                     if (!res.ok) throw new Error("Download failed");
@@ -222,8 +221,7 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                   onClick={async () => {
                     try {
                       const token = localStorage.getItem("estatepro_token") || "";
-                      const base = (import.meta.env.VITE_API_URL || "").replace(/\/api\/?$/, "");
-                      const r = await fetch(`${base}/api/documents/${docViewer.did}/file?dl=1`, { headers: { Authorization: `Bearer ${token}` } });
+                          const r = await fetch(`${API_BASE}/api/documents/${docViewer.did}/file?dl=1`, { headers: { Authorization: `Bearer ${token}` } });
                       if (!r.ok) throw new Error();
                       const blob = await r.blob();
                       const blobUrl = URL.createObjectURL(blob);

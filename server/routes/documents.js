@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import mongoose from 'mongoose';
+import https from 'https';
 import { Readable } from 'stream';
 import Block from '../models/Block.js';
 import { txBlock, txDoc } from '../utils/transform.js';
@@ -99,8 +100,8 @@ router.delete('/documents/:did', verifyJWT, async (req, res, next) => {
 // GET /api/documents/:did/file        — serve file inline (view in new tab)
 // GET /api/documents/:did/file?dl=1  — serve file as download
 //
-// Fetches the file from Cloudinary CDN (public URL, no auth needed) and streams
-// it back to the browser as same-origin — so Content-Disposition and filename work.
+// Uses Node's built-in https.get to stream from Cloudinary CDN and re-serve
+// with correct Content-Disposition header (same-origin, so browser handles it).
 router.get('/documents/:did/file', async (req, res, next) => {
   try {
     const block = await Block.findOne({
@@ -120,16 +121,19 @@ router.get('/documents/:did/file', async (req, res, next) => {
     const safeName = (doc.name || 'file').replace(/["\\]/g, '');
     const disposition = req.query.dl === '1' ? 'attachment' : 'inline';
 
-    // Cloudinary CDN URLs (res.cloudinary.com) are publicly accessible without auth.
-    // Only Cloudinary API calls (api.cloudinary.com) require API key/secret.
-    const upstream = await fetch(doc.url);
-    if (!upstream.ok) return res.status(502).send(`Upstream error ${upstream.status}`);
-
-    const buffer = await upstream.arrayBuffer();
-    res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `${disposition}; filename="${safeName}"`);
-    res.setHeader('Cache-Control', 'private, max-age=300');
-    return res.send(Buffer.from(buffer));
+    // Stream directly from Cloudinary CDN to the client.
+    // CDN URLs (res.cloudinary.com) are public — no API auth needed.
+    https.get(doc.url, (cloudRes) => {
+      if (cloudRes.statusCode >= 400) {
+        res.status(502).send(`Upstream error: ${cloudRes.statusCode}`);
+        cloudRes.resume(); // drain so socket closes
+        return;
+      }
+      res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `${disposition}; filename="${safeName}"`);
+      res.setHeader('Cache-Control', 'private, max-age=300');
+      cloudRes.pipe(res);
+    }).on('error', next);
   } catch (err) { next(err); }
 });
 

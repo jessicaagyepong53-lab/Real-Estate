@@ -160,7 +160,7 @@ router.put('/tenants/:tid', verifyJWT, async (req, res, next) => {
     }
     const { tid, documents, _id, ...updates } = req.body;
     // Coerce number fields sent as strings
-    for (const f of ['monthlyRent', 'advanceMonths', 'advanceAmount', 'depositAmount', 'balanceOwed']) {
+    for (const f of ['monthlyRent', 'advanceMonths', 'advanceAmount', 'depositAmount', 'balanceOwed', 'refundAmount']) {
       if (updates[f] != null) updates[f] = Number(updates[f]);
     }
     Object.assign(tenant, updates);

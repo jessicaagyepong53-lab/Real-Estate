@@ -195,8 +195,7 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "#111", borderBottom: "1px solid #333", flexShrink: 0 }}>
               <span style={{ fontSize: 13, color: "#ddd", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>{docViewer.name}</span>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <a href={`${API}/api/documents/${docViewer.did}/file?dl=1`} download={docViewer.name} style={{ background: "#2a6", color: "#fff", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontFamily: "Georgia,serif", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>⬇ Download</a>
-                <a href={`${API}/api/documents/${docViewer.did}/file`} target="_blank" rel="noreferrer" style={{ background: "#226", color: "#aaf", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontFamily: "Georgia,serif", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>⧉ New Tab</a>
+                <a href={docViewer.url} target="_blank" rel="noreferrer" style={{ background: "#2a6", color: "#fff", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontFamily: "Georgia,serif", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>⬇ Download</a>
                 <button onClick={() => setDocViewer(null)} style={{ background: C.rose, border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 700 }}>✕ Close</button>
               </div>
             </div>

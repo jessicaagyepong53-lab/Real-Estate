@@ -96,12 +96,9 @@ router.delete('/documents/:did', verifyJWT, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/documents/:did/file        — serve file inline (view in new tab)
-// GET /api/documents/:did/file?dl=1  — serve file as download
-//
-// Strategy: use private_download_url (Cloudinary API auth, not CDN) to get an
-// authenticated URL, fetch the bytes server-side, re-serve with correct headers.
-// This bypasses CDN access restrictions AND strict-transformation rejections entirely.
+// GET /api/documents/:did/file — redirect directly to the Cloudinary CDN URL.
+// Cloudinary CDN URLs are publicly accessible (no auth needed) as proven by
+// image <img src={doc.url}> working fine. No proxy, no transformations.
 router.get('/documents/:did/file', async (req, res, next) => {
   try {
     const block = await Block.findOne({
@@ -118,40 +115,7 @@ router.get('/documents/:did/file', async (req, res, next) => {
     }
     if (!doc?.url) return res.status(404).send('No file stored');
 
-    const isDownload = req.query.dl === '1';
-    const safeName  = (doc.name || 'file').replace(/["\\]/g, '');
-    const ext       = (doc.name?.split('.').pop() || '').toLowerCase();
-
-    // Detect resource_type from stored URL path
-    const resTypeMatch = doc.url.match(/\/(image|video|raw)\/upload\//);
-    const resourceType = resTypeMatch?.[1] ?? 'raw';
-
-    let fetchUrl;
-    if (doc.cloudinaryId) {
-      // private_download_url generates https://api.cloudinary.com/... with API-key auth.
-      // This works regardless of CDN delivery restrictions or strict-transformations setting.
-      const expires = Math.floor(Date.now() / 1000) + 300;
-      fetchUrl = cloudinary.utils.private_download_url(
-        doc.cloudinaryId,
-        ext || 'bin',
-        { resource_type: resourceType, expires_at: expires },
-      );
-    } else {
-      fetchUrl = doc.url; // legacy fallback
-    }
-
-    const upstream = await fetch(fetchUrl);
-    if (!upstream.ok) {
-      const body = await upstream.text().catch(() => '');
-      return res.status(502).send(`Upstream ${upstream.status}: ${body.slice(0, 300)}`);
-    }
-
-    const buffer = await upstream.arrayBuffer();
-    const disposition = isDownload ? 'attachment' : 'inline';
-    res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `${disposition}; filename="${safeName}"`);
-    res.setHeader('Cache-Control', 'private, max-age=300');
-    return res.send(Buffer.from(buffer));
+    return res.redirect(302, doc.url);
   } catch (err) { next(err); }
 });
 

@@ -122,22 +122,10 @@ router.get('/documents/:did/file', async (req, res, next) => {
         if (d) { doc = d; break outer; }
       }
     }
-    if (!doc?.cloudinaryId) return res.status(404).send('No file stored');
+    if (!doc?.url) return res.status(404).send('No file stored');
 
-    // Detect resource_type from the stored URL
-    const resourceType = doc.url?.includes('/video/') ? 'video'
-                       : doc.url?.includes('/image/') ? 'image'
-                       : 'raw';
-
-    // Generate a short-lived signed URL — bypasses any Cloudinary access restrictions
-    const signedUrl = cloudinary.url(doc.cloudinaryId, {
-      resource_type: resourceType,
-      sign_url: true,
-      expires_at: Math.floor(Date.now() / 1000) + 120, // 2 minutes
-    });
-
-    // Fetch file server-side and stream to client
-    const upstream = await fetch(signedUrl);
+    // Fetch file server-side (Node.js bypasses browser CORS/embedding restrictions)
+    const upstream = await fetch(doc.url);
     if (!upstream.ok) return res.status(502).send('Could not retrieve file from storage');
 
     const dl = req.query.dl === '1';

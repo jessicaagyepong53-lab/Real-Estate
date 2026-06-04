@@ -326,6 +326,13 @@ export default function App() {
             reminderUnits={reminderUnits}
             totalRentPaid={totalRentPaid}
             totalDepHeld={totalDepHeld}
+            onRecordPayment={withAuth(async (tid, amount, date) => {
+              const tenant = allTenants.find((t) => t.tid === tid);
+              if (!tenant) return;
+              const newBalance = Math.max(0, (Number(tenant.balanceOwed) || 0) - amount);
+              const block = await apiUpdateTenant(tid, { ...tenant, balanceOwed: newBalance, lastPaymentAmount: amount, lastPaymentDate: date });
+              setBlocks((prev) => prev.map((b) => b.bid === block.bid ? block : b));
+            })}
           />
         )}
 

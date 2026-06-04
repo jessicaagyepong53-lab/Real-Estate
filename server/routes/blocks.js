@@ -236,7 +236,9 @@ router.post('/tenants/:tid/renew', verifyJWT, async (req, res, next) => {
     tenant.advanceAmount  = req.body.advanceMonths && tenant.monthlyRent
       ? Number(req.body.advanceMonths) * tenant.monthlyRent
       : (req.body.advanceAmount != null ? Number(req.body.advanceAmount) : 0);
-    tenant.balanceOwed    = req.body.balanceOwed    != null ? Number(req.body.balanceOwed)    : 0;
+    tenant.balanceOwed         = req.body.balanceOwed    != null ? Number(req.body.balanceOwed)    : 0;
+    tenant.lastPaymentAmount   = req.body.lastPaymentAmount != null ? Number(req.body.lastPaymentAmount) : (tenant.lastPaymentAmount || 0);
+    tenant.lastPaymentDate     = req.body.lastPaymentDate   ?? tenant.lastPaymentDate ?? null;
     tenant.leaseStatus    = 'active';
     // Sync unit monthlyRent
     if (req.body.monthlyRent > 0) {

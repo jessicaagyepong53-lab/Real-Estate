@@ -42,9 +42,11 @@ const selSt = {
   padding: "8px 12px", color: C.text, fontSize: 13, fontFamily: "Georgia,serif", cursor: "pointer",
 };
 
-export default function Dashboard({ totalRev, occupiedUnits, allUnits, blocks, maint, dueSoonCount, overdueCount, reminderUnits, totalRentPaid, totalDepHeld }) {
+export default function Dashboard({ totalRev, occupiedUnits, allUnits, blocks, maint, dueSoonCount, overdueCount, reminderUnits, totalRentPaid, totalDepHeld, onRecordPayment }) {
   const [filterBlock, setFilterBlock] = useState("");
   const [filterUnit,  setFilterUnit]  = useState("");
+  const [payInput,    setPayInput]    = useState({}); // tid → input string
+  const [payDate,     setPayDate]     = useState({}); // tid → date string
 
   const blockUnits  = filterBlock ? allUnits.filter((u) => u.blockId === filterBlock) : allUnits;
   const scopeUnits  = filterUnit  ? blockUnits.filter((u) => u.uid === filterUnit)    : blockUnits;
@@ -199,24 +201,74 @@ export default function Dashboard({ totalRev, occupiedUnits, allUnits, blocks, m
                   <th style={th}>Tenant</th>
                   <th style={th}>Monthly Rent</th>
                   <th style={th}>Total Expected</th>
-                  <th style={th}>Balance Owed</th>
                   <th style={th}>Amount Received</th>
+                  <th style={th}>Balance Owed</th>
+                  <th style={th}>Record Payment</th>
                 </tr>
               </thead>
               <tbody>
                 {balanceRows.map(({ unit: u, tenant: a, balance }) => {
-                  const advAmt  = Number(a.advanceAmount) || 0;
-                  const dep     = Number(a.depositAmount) || 0;
-                  const total   = advAmt + dep;
+                  const advAmt   = Number(a.advanceAmount) || 0;
+                  const dep      = Number(a.depositAmount) || 0;
+                  const total    = advAmt + dep;
                   const received = total - balance;
+                  const tid      = a.tid;
+                  const inputVal  = payInput[tid] ?? "";
+                  const payAmt    = Number(inputVal) || 0;
+                  const newBal    = Math.max(0, balance - payAmt);
+                  const today     = new Date().toISOString().slice(0, 10);
+                  const dateVal   = payDate[tid] ?? today;
+                  const lastAmt   = Number(a.lastPaymentAmount) || 0;
+                  const lastDate  = a.lastPaymentDate || "";
                   return (
-                    <tr key={a.tid}>
+                    <tr key={tid}>
                       <td style={td}><b style={{ color: C.text }}>{u.blockName}</b><span style={{ color: C.muted }}> / {u.name}</span></td>
-                      <td style={{ ...td, fontWeight: 600 }}>{a.name}</td>
+                      <td style={{ ...td, fontWeight: 600 }}>
+                        {a.name}
+                        {lastDate && (
+                          <div style={{ fontSize: 11, color: C.sage, marginTop: 2 }}>
+                            Last paid: <b>GHS {lastAmt.toLocaleString()}</b> on {lastDate}
+                          </div>
+                        )}
+                      </td>
                       <td style={td}>{fmt(u.monthlyRent)}</td>
                       <td style={td}>{total > 0 ? fmt(total) : <span style={{ color: C.faint }}>—</span>}</td>
-                      <td style={{ ...td, color: C.rose, fontWeight: 700 }}>{fmt(balance)}</td>
                       <td style={{ ...td, color: C.sage, fontWeight: 600 }}>{total > 0 ? fmt(received) : <span style={{ color: C.faint }}>—</span>}</td>
+                      <td style={{ ...td, color: C.rose, fontWeight: 700 }}>{fmt(balance)}</td>
+                      <td style={td}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <input
+                              type="number"
+                              min="0"
+                              max={balance}
+                              placeholder="Amount paid"
+                              value={inputVal}
+                              onChange={(e) => setPayInput((p) => ({ ...p, [tid]: e.target.value }))}
+                              style={{ width: 110, padding: "4px 8px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12, fontFamily: "Georgia,serif", color: C.text, background: C.deep }}
+                            />
+                            <input
+                              type="date"
+                              value={dateVal}
+                              onChange={(e) => setPayDate((p) => ({ ...p, [tid]: e.target.value }))}
+                              style={{ padding: "4px 8px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12, fontFamily: "Georgia,serif", color: C.text, background: C.deep }}
+                            />
+                          </div>
+                          {payAmt > 0 && (
+                            <button
+                              onClick={() => {
+                                onRecordPayment(tid, payAmt, dateVal);
+                                setPayInput((p) => { const n = { ...p }; delete n[tid]; return n; });
+                                setPayDate((p)  => { const n = { ...p }; delete n[tid]; return n; });
+                              }}
+                              style={{ padding: "4px 10px", background: C.sage, border: "none", color: "#fff", borderRadius: 6, fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", alignSelf: "flex-start" }}
+                              title={`New balance: GHS ${newBal.toLocaleString()}`}
+                            >
+                              ✓ {newBal === 0 ? "Mark Paid" : `GHS ${newBal.toLocaleString()} left`}
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -224,9 +276,9 @@ export default function Dashboard({ totalRev, occupiedUnits, allUnits, blocks, m
               {balanceRows.length > 1 && (
                 <tfoot>
                   <tr style={{ background: C.panel }}>
-                    <td style={{ ...td, fontWeight: 700 }} colSpan={4}>Total</td>
+                    <td style={{ ...td, fontWeight: 700 }} colSpan={5}>Total</td>
                     <td style={{ ...td, fontWeight: 700, color: C.rose }}>{fmt(totalBalanceOwed)}</td>
-                    <td style={{ ...td, fontWeight: 700, color: C.sage }}>{fmt(balanceRows.reduce((s,r)=>{ const t=(Number(r.tenant.advanceAmount)||0)+(Number(r.tenant.depositAmount)||0); return s+(t-r.balance); },0))}</td>
+                    <td style={td} />
                   </tr>
                 </tfoot>
               )}

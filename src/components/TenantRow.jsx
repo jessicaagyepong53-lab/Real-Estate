@@ -247,6 +247,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                             </>}
                             {balance > 0 && <><span style={{ color: C.rose, fontWeight: 700 }}>Balance Owed</span><span style={{ color: C.rose, fontWeight: 700, textAlign: "right" }}>GHS {balance.toLocaleString()}</span></>}
                             {balance > 0 && <><span style={{ color: C.sage, fontWeight: 700 }}>Amount Received</span><span style={{ color: C.sage, fontWeight: 700, textAlign: "right" }}>GHS {(total - balance).toLocaleString()}</span></>}
+                            {t.lastPaymentDate && <><span style={{ color: C.muted }}>Last Payment</span><span style={{ color: C.sage, textAlign: "right" }}>GHS {(Number(t.lastPaymentAmount)||0).toLocaleString()} — {t.lastPaymentDate}</span></>}
                           </div>
                         </div>
                       );

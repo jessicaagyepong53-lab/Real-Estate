@@ -96,13 +96,12 @@ router.delete('/documents/:did', verifyJWT, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/documents/:did/file        — open file in new tab (view)
-// GET /api/documents/:did/file?dl=1  — download file
+// GET /api/documents/:did/file        — serve file inline (view in new tab)
+// GET /api/documents/:did/file?dl=1  — serve file as download
 //
-// Generates a signed Cloudinary CDN URL (pure local HMAC, no network call) and
-// redirects the browser to it.  fl_inline is intentionally NOT used — Cloudinary
-// returns 400 for that flag.  For viewing we rely on the browser's native PDF /
-// image handling when the new tab opens.
+// Strategy: use private_download_url (Cloudinary API auth, not CDN) to get an
+// authenticated URL, fetch the bytes server-side, re-serve with correct headers.
+// This bypasses CDN access restrictions AND strict-transformation rejections entirely.
 router.get('/documents/:did/file', async (req, res, next) => {
   try {
     const block = await Block.findOne({
@@ -120,30 +119,39 @@ router.get('/documents/:did/file', async (req, res, next) => {
     if (!doc?.url) return res.status(404).send('No file stored');
 
     const isDownload = req.query.dl === '1';
+    const safeName  = (doc.name || 'file').replace(/["\\]/g, '');
+    const ext       = (doc.name?.split('.').pop() || '').toLowerCase();
 
-    // Detect resource_type from the stored URL (e.g. /raw/upload/ or /image/upload/)
+    // Detect resource_type from stored URL path
     const resTypeMatch = doc.url.match(/\/(image|video|raw)\/upload\//);
     const resourceType = resTypeMatch?.[1] ?? 'raw';
 
-    const options = {
-      secure: true,
-      resource_type: resourceType,
-      type: 'upload',
-      sign_url: true,
-    };
-
-    if (isDownload) {
-      // fl_attachment forces Save dialog with the original filename
-      const safeName = (doc.name || 'file').replace(/[^\w.\-]/g, '_');
-      options.transformation = [{ flags: `attachment:${safeName}` }];
+    let fetchUrl;
+    if (doc.cloudinaryId) {
+      // private_download_url generates https://api.cloudinary.com/... with API-key auth.
+      // This works regardless of CDN delivery restrictions or strict-transformations setting.
+      const expires = Math.floor(Date.now() / 1000) + 300;
+      fetchUrl = cloudinary.utils.private_download_url(
+        doc.cloudinaryId,
+        ext || 'bin',
+        { resource_type: resourceType, expires_at: expires },
+      );
+    } else {
+      fetchUrl = doc.url; // legacy fallback
     }
-    // For view: no transformation — browser opens the file natively in the new tab
 
-    const deliveryUrl = doc.cloudinaryId
-      ? cloudinary.url(doc.cloudinaryId, options)
-      : doc.url;
+    const upstream = await fetch(fetchUrl);
+    if (!upstream.ok) {
+      const body = await upstream.text().catch(() => '');
+      return res.status(502).send(`Upstream ${upstream.status}: ${body.slice(0, 300)}`);
+    }
 
-    return res.redirect(302, deliveryUrl);
+    const buffer = await upstream.arrayBuffer();
+    const disposition = isDownload ? 'attachment' : 'inline';
+    res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `${disposition}; filename="${safeName}"`);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    return res.send(Buffer.from(buffer));
   } catch (err) { next(err); }
 });
 

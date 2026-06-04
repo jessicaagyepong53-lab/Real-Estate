@@ -125,13 +125,13 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                 const run = () => {
                   if (!doc.did) return;
                   if (isImg) {
-                    // Images: show in an in-page modal
                     setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: true });
                   } else {
-                    // PDFs and office docs: open in a new browser tab.
-                    // window.open is far more reliable than an iframe — the browser's
-                    // native PDF viewer handles it regardless of Content-Disposition.
-                    window.open(`${API}/api/documents/${doc.did}/file`, '_blank', 'noopener');
+                    // All non-image docs (PDF, Office) go through the proxy.
+                    // Proxy serves with Content-Disposition:inline so browser renders natively.
+                    // Using iframe inside the modal avoids popup-blocker issues.
+                    setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false,
+                      iframeUrl: `${API}/api/documents/${doc.did}/file` });
                   }
                 };
                 if (requireAuth) requireAuth(run); else run();
@@ -196,6 +196,7 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
               <span style={{ fontSize: 13, color: "#ddd", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>{docViewer.name}</span>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                 <a href={`${API}/api/documents/${docViewer.did}/file?dl=1`} download={docViewer.name} style={{ background: "#2a6", color: "#fff", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontFamily: "Georgia,serif", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>⬇ Download</a>
+                <a href={`${API}/api/documents/${docViewer.did}/file`} target="_blank" rel="noreferrer" style={{ background: "#226", color: "#aaf", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontFamily: "Georgia,serif", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>⧉ New Tab</a>
                 <button onClick={() => setDocViewer(null)} style={{ background: C.rose, border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 700 }}>✕ Close</button>
               </div>
             </div>

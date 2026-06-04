@@ -7,6 +7,7 @@ import { today, yr, daysUntil, getLeaseStatus } from "./utils/helpers";
 import { fetchBlocks, createBlock, deleteBlock as apiDeleteBlock, addUnit as apiAddUnit, deleteUnit as apiDeleteUnit, addTenant as apiAddTenant, updateTenant as apiUpdateTenant } from "./api/blocks.js";
 import { fetchMaintenance, createMaintenance, updateMaintenance as apiUpdateMaintenance } from "./api/maintenance.js";
 import { verifyToken, logout as apiLogout } from "./api/auth.js";
+import { useToast } from "./components/Toast";
 import LoadingSpinner   from "./components/LoadingSpinner.jsx";
 import NotificationBell from "./components/NotificationBell.jsx";
 import LoginPage        from "./pages/LoginPage";
@@ -19,6 +20,7 @@ import SecurityDeposits from "./pages/SecurityDeposits";
 import Settings        from "./pages/Settings";
 
 export default function App() {
+  const toast = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin]             = useState(false);
   const [showAuthPrompt, setShowAuthPrompt]   = useState(false);
@@ -113,50 +115,60 @@ export default function App() {
       leaseEnd: endDate || undefined,
     });
     setBlocks((prev) => prev.map((b) => b.bid === block.bid ? block : b));
+    toast("Lease ended successfully.", "lease");
   }
 
   async function saveTenant(unitId, updated) {
     const block = await apiUpdateTenant(updated.tid, updated);
     setBlocks((prev) => prev.map((b) => b.bid === block.bid ? block : b));
+    toast("Profile saved.", "save");
   }
 
   function handleRenew(block) {
     setBlocks((prev) => prev.map((b) => b.bid === block.bid ? block : b));
+    toast("Lease renewed successfully.", "lease");
   }
 
   async function addTenant(unitId, tenant) {
     const block = await apiAddTenant(unitId, tenant);
     setBlocks((prev) => prev.map((b) => b.bid === block.bid ? block : b));
+    toast(`Tenant "${tenant.name}" added.`, "success");
   }
 
   async function addUnit(blockId, unit) {
     const block = await apiAddUnit(blockId, unit);
     setBlocks((prev) => prev.map((b) => b.bid === block.bid ? block : b));
+    toast(`Room "${unit.name}" added.`, "success");
   }
 
   async function deleteUnit(uid) {
     await apiDeleteUnit(uid);
     setBlocks((prev) => prev.map((b) => ({ ...b, units: b.units.filter((u) => u.uid !== uid) })));
+    toast("Room deleted.", "delete");
   }
 
   async function deleteBlock(bid) {
     await apiDeleteBlock(bid);
     setBlocks((prev) => prev.filter((b) => b.bid !== bid));
+    toast("Block deleted.", "delete");
   }
 
   async function addBlock(block) {
     const created = await createBlock({ name: block.name, type: block.type, address: block.address || "" });
     setBlocks((prev) => [...prev, created]);
+    toast(`Block "${block.name}" created.`, "success");
   }
 
   async function saveMaint(entry) {
     const created = await createMaintenance(entry);
     setMaint((prev) => [created, ...prev]);
+    toast("Maintenance request created.", "info");
   }
 
   async function updMaint(id, status) {
     const updated = await apiUpdateMaintenance(id, { status });
     setMaint((prev) => prev.map((m) => m.id === id ? updated : m));
+    toast(`Maintenance status → ${status}.`, status === "Completed" ? "success" : "info");
   }
 
   // ── Auth guard ─────────────────────────────────────────────────────────────────────

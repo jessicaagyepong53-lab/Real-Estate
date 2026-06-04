@@ -3,6 +3,7 @@ import { uploadDocument, deleteDocument } from "../api/documents.js";
 import { renewTenant } from "../api/blocks.js";
 import { C } from "../constants/colors";
 import { PROF_FIELDS } from "../constants/options";
+import { useToast } from "./Toast";
 import { iSt, lSt } from "../styles/shared";
 import { fmtDate } from "../utils/formatters";
 import { yr, monthsAgo, today, getLeaseStatus } from "../utils/helpers";
@@ -16,6 +17,7 @@ import RenewLeaseModal from "./RenewLeaseModal";
 import DocumentVault from "./DocumentVault";
 
 export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSave, onRenew }) {
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [editing, setEditing] = useState(false);
@@ -59,19 +61,20 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
     const computed = rent > 0 ? { advanceAmount: adv * rent, depositAmount: rent, depositPaid: true } : {};
     onSave({ ...draft, ...computed });
     setEditing(false);
+    toast("Profile saved.", "save");
   }
   function handleEndLease(reason, endDate) { onEndLease(t.tid, reason, endDate); setShowEndModal(false); }
   async function handleRenew(data) {
     try {
       const block = await renewTenant(t.tid, data);
       if (onRenew) onRenew(block);
-    } catch (e) { console.error(e); }
+      toast("Lease renewed successfully.", "lease");
+    } catch (e) { console.error(e); toast("Failed to renew lease.", "error"); }
     setShowRenewModal(false);
   }
   async function addDoc(file, cat, note) {
     const result = await uploadDocument(t.tid, file, cat, note);
     setLocalDocs((prev) => [...prev, result]);
-    // Show toast if lease details were auto-extracted from the PDF
     const ex = result._extracted;
     if (ex && Object.keys(ex).length > 0) {
       const lines = [];
@@ -81,16 +84,19 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
       if (ex.depositAmount) lines.push(`Security Deposit: GHS ${Number(ex.depositAmount).toLocaleString()}`);
       if (ex.leaseStart)    lines.push(`Lease Start: ${ex.leaseStart}`);
       if (ex.leaseEnd)      lines.push(`Lease End: ${ex.leaseEnd}`);
-      if (lines.length > 0) alert(`✅ Lease details auto-extracted from PDF:\n\n${lines.join('\n')}`);
+      toast(`📄 Lease details extracted:\n${lines.join(' · ')}`, "upload", 6000);
+    } else {
+      toast(`"${file.name}" uploaded.`, "upload");
     }
   }
   async function delDoc(did) {
     try {
       await deleteDocument(did);
       setLocalDocs((prev) => prev.filter((d) => d.did !== did));
+      toast("Document deleted.", "delete");
     } catch (e) {
-      alert('Delete failed — the server may still be starting up. Please wait a moment and try again.');
-      console.error('delDoc error:', e);
+      toast("Delete failed — server may be starting up. Try again shortly.", "error");
+      console.error("delDoc error:", e);
     }
   }
 

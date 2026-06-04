@@ -36,7 +36,7 @@ export default function LeaseFilter({ allTenants, filteredTenants, allYears, fil
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "18px 22px", marginBottom: 18, display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <div>
           <label style={lSt}>Filter Mode</label>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div className="filter-mode-row" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {[["period", "Lease Period"], ["movein", "Move-in Year"], ["moveout", "Move-out Year"]].map(([v, l]) => (
               <button key={v} onClick={() => setFilterMode(v)} style={{ padding: "7px 14px", border: `1px solid ${filterMode === v ? C.teal : C.border}`, borderRadius: 8, background: filterMode === v ? C.tealBg : C.deep, color: filterMode === v ? C.teal : C.muted, cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 600 }}>
                 {l}

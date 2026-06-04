@@ -61,10 +61,18 @@ export default function LoginPage({ onLogin, onCancel }) {
 
       {/* Branding */}
       <div style={{ textAlign: "center", marginBottom: 36 }}>
-        <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: "-0.5px", color: C.text }}>
-          Estate<span style={{ color: C.teal }}>Pro</span> <span style={{ color: C.gold }}>Manager</span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 8 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 15, background: `linear-gradient(145deg, ${C.gold}, #b8860b)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,0.15)", flexShrink: 0 }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 17L5 9L9 13L12 6L15 13L19 9L21 17H3Z" fill="white" stroke="white" strokeWidth="0.5" strokeLinejoin="round"/>
+              <rect x="3" y="18" width="18" height="2.5" rx="1.25" fill="white"/>
+            </svg>
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.5px", color: C.text, lineHeight: 1.1 }}>
+            Ivory <span style={{ color: C.teal }}>Crown</span> <span style={{ color: C.gold }}>Homes</span>
+          </div>
         </div>
-        <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2.5, textTransform: "uppercase", marginTop: 6 }}>
+        <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2.5, textTransform: "uppercase", marginTop: 4 }}>
           Property Management System
         </div>
       </div>

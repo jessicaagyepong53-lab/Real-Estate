@@ -87,7 +87,7 @@ export default function Dashboard({ totalRev, occupiedUnits, allUnits, blocks, m
               }
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <div className="fin-filter-row" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <select value={filterBlock} onChange={(e) => onBlockChange(e.target.value)} style={selSt}>
               <option value="">All Blocks / Properties</option>
               {blocks.map((b) => <option key={b.bid} value={b.bid}>{b.name}</option>)}

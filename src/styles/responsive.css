@@ -10,20 +10,23 @@ body { margin: 0; }
   border-radius: 8px;
 }
 
-/* ── Mobile  (≤ 600px) ───────────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════════════════════
+   MOBILE  ≤ 600px
+   ════════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 600px) {
 
-  /* ── Header ── */
+  /* ── Header ─────────────────────────────────────────────────────────────── */
   .app-header {
     padding: 10px 12px !important;
     flex-wrap: wrap !important;
     gap: 8px !important;
   }
-  .header-logo    { width: 36px !important; height: 36px !important; border-radius: 9px !important; }
-  .header-title   { font-size: 15px !important; }
+  .header-logo     { width: 36px !important; height: 36px !important; border-radius: 9px !important; }
+  .header-logo svg { width: 20px !important; height: 20px !important; }
+  .header-title    { font-size: 15px !important; }
   .header-subtitle { font-size: 9px !important; letter-spacing: 1.4px !important; margin-top: 1px !important; }
 
-  /* header-right: full width second row, everything pushed to far right */
+  /* header-right: full-width second row, right-aligned */
   .header-right {
     width: 100% !important;
     justify-content: flex-end !important;
@@ -31,32 +34,35 @@ body { margin: 0; }
     gap: 8px !important;
     align-items: center !important;
   }
-
-  /* Hide long weekday date; show "X/Y Units Occupied" */
   .header-date { display: none !important; }
   .header-occ  { font-size: 11px !important; margin-top: 0 !important; white-space: nowrap; }
 
-  /* ── Nav ── */
+  /* ── Nav tabs ────────────────────────────────────────────────────────────── */
   .app-nav { padding: 0 2px !important; gap: 0 !important; overflow-x: auto !important; }
-  .app-nav button { padding: 9px 8px !important; font-size: 10px !important; white-space: nowrap !important; flex-shrink: 0 !important; }
+  .app-nav::-webkit-scrollbar { display: none; }
+  .app-nav button {
+    padding: 9px 8px !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
 
-  /* ── Page content ── */
-  .app-content { padding: 12px 10px !important; }
+  /* ── Page content ────────────────────────────────────────────────────────── */
+  .app-content { padding: 10px 8px !important; }
 
-  /* ── Stat grid — 2 cols on mobile ── */
+  /* ── Stat grid — 2 cols on mobile ───────────────────────────────────────── */
   .stat-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px !important;
   }
 
-  /* ── Cards ── */
+  /* ── Generic card ────────────────────────────────────────────────────────── */
   .app-card { padding: 14px 10px !important; }
 
-  /* ── All tables: force horizontal scroll ── */
-  table { min-width: 420px !important; }
+  /* ── All tables: horizontal scroll + min-width ───────────────────────────── */
   .tbl-wrap table { min-width: 420px !important; }
 
-  /* ── Page headers (title + button row) ── */
+  /* ── Page header row (title + action button) ─────────────────────────────── */
   .page-header {
     flex-direction: column !important;
     align-items: flex-start !important;
@@ -64,22 +70,28 @@ body { margin: 0; }
     margin-bottom: 12px !important;
   }
 
-  /* ── Dashboard: Revenue by Block bars ── */
+  /* ── Dashboard: Revenue by Block bars ───────────────────────────────────── */
   .rev-row { flex-wrap: wrap !important; gap: 4px !important; }
   .rev-row .rev-name { min-width: 100% !important; }
   .rev-row .rev-amt  { min-width: auto !important; }
 
-  /* ── BlockCard: hide duplicate occ badge in header ── */
+  /* ── Dashboard: financial filter row — stack selects ────────────────────── */
+  .fin-filter-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .fin-filter-row select,
+  .fin-filter-row button { width: 100% !important; }
+
+  /* ── BlockCard ───────────────────────────────────────────────────────────── */
   .block-occ-badge { display: none !important; }
-
-  /* ── BlockCard: Add Unit form — 1 col ── */
-  .add-unit-grid { grid-template-columns: 1fr !important; }
-
-  /* ── BlockCard: actions row (label + buttons) ── */
+  .block-card-header { padding: 12px 14px !important; gap: 10px !important; }
+  .block-card-body   { padding: 12px 14px !important; }
+  .add-unit-grid     { grid-template-columns: 1fr !important; }
   .block-actions { flex-direction: column !important; align-items: flex-start !important; gap: 6px !important; }
   .block-actions > div { flex-wrap: wrap !important; gap: 6px !important; }
 
-  /* ── TenantRow: Renew / End Lease buttons ── */
+  /* ── TenantRow: header action buttons ───────────────────────────────────── */
   .tenant-actions {
     flex-direction: column !important;
     gap: 5px !important;
@@ -87,36 +99,80 @@ body { margin: 0; }
   }
   .tenant-actions button { font-size: 11px !important; padding: 6px 10px !important; }
 
-  /* ── Maintenance: log request modal form ── */
+  /* ── TenantRow: edit profile form — 1 col ───────────────────────────────── */
+  .tenant-edit-grid { grid-template-columns: 1fr !important; }
+
+  /* ── UnitPanel: add tenant form — 1 col ─────────────────────────────────── */
+  .add-tenant-grid { grid-template-columns: 1fr !important; }
+
+  /* ── DocumentVault: category/note upload row — 1 col ────────────────────── */
+  .doc-cat-grid { grid-template-columns: 1fr !important; }
+
+  /* ── DocumentVault: file row buttons — compact ───────────────────────────── */
+  .doc-file-actions { flex-wrap: wrap !important; gap: 4px !important; }
+
+  /* ── Maintenance: log request modal form ─────────────────────────────────── */
   .maint-form-grid { grid-template-columns: 1fr !important; }
 
-  /* ── Settings: Trash bin filter chips — wrap ── */
+  /* ── LeaseFilter: filter mode toggle buttons ─────────────────────────────── */
+  .filter-mode-row { flex-wrap: wrap !important; gap: 5px !important; }
+  .filter-mode-row button { flex: 1 1 auto !important; text-align: center !important; }
+
+  /* ── Settings: PIN form — 1 col ─────────────────────────────────────────── */
+  .pin-form-grid { grid-template-columns: 1fr !important; }
+
+  /* ── Settings: Trash filters ─────────────────────────────────────────────── */
   .trash-filters { flex-wrap: wrap !important; gap: 5px !important; }
   .trash-filters button { font-size: 10px !important; padding: 4px 10px !important; }
 
-  /* ── Settings: Bulk action bar ── */
+  /* ── Settings: Bulk action bar ───────────────────────────────────────────── */
   .bulk-actions { flex-wrap: wrap !important; gap: 7px !important; }
   .bulk-actions button { font-size: 11px !important; padding: 6px 12px !important; }
 
-  /* ── Modals ── */
+  /* ── RenewLeaseModal: dates row — 1 col ─────────────────────────────────── */
+  .renew-dates-grid { grid-template-columns: 1fr !important; }
+
+  /* ── Modals: full-width, reduced padding ─────────────────────────────────── */
   .modal-box { width: 96% !important; padding: 18px 14px !important; }
+
+  /* Ensure fixed modals don't overflow viewport horizontally */
+  [style*="position: fixed"] > div,
+  [style*="position:fixed"] > div { max-width: 100vw; }
 }
 
-/* ── Tablet  (601px – 900px) ─────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════════════════════
+   TABLET  601px – 900px
+   ════════════════════════════════════════════════════════════════════════════ */
 @media (min-width: 601px) and (max-width: 900px) {
-  .app-header  { padding: 14px 18px !important; }
-  .app-content { padding: 18px 18px !important; }
-  .app-nav button { padding: 11px 12px !important; font-size: 12px !important; }
 
-  /* Stat grid — 3 cols on tablet */
+  /* ── Header / Nav / Content ──────────────────────────────────────────────── */
+  .app-header   { padding: 14px 18px !important; }
+  .app-content  { padding: 16px 18px !important; }
+  .app-nav button { padding: 11px 12px !important; font-size: 12px !important; }
+  .header-date  { font-size: 11px !important; }
+
+  /* ── Stat grid — 3 cols on tablet ───────────────────────────────────────── */
   .stat-grid { grid-template-columns: repeat(3, 1fr) !important; }
 
-  .header-date { font-size: 11px !important; }
+  /* ── BlockCard ───────────────────────────────────────────────────────────── */
+  .block-card-header { padding: 14px 18px !important; }
+  .block-card-body   { padding: 14px 18px !important; }
+  .add-unit-grid     { grid-template-columns: 1fr 1fr !important; }
 
-  /* BlockCard: Add Unit form — 2 cols on tablet */
-  .add-unit-grid { grid-template-columns: 1fr 1fr !important; }
-
-  /* Maintenance modal form — 2 cols on tablet (default) */
+  /* ── Maintenance modal form — 2 cols ────────────────────────────────────── */
   .maint-form-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* ── TenantRow: add-tenant form — 2 cols ────────────────────────────────── */
+  .add-tenant-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* ── Page header ─────────────────────────────────────────────────────────── */
+  .page-header { flex-wrap: wrap !important; gap: 10px !important; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   LARGE DESKTOP  ≥ 1200px
+   ════════════════════════════════════════════════════════════════════════════ */
+@media (min-width: 1200px) {
+  .stat-grid { grid-template-columns: repeat(4, 1fr) !important; }
 }
 

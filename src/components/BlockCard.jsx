@@ -30,10 +30,10 @@ export default function BlockCard({ block, requireAuth, onEndLease, onSaveTenant
   const accentBg    = occ === total && total > 0 ? C.sageBg : occ === 0 ? C.coralBg : C.amberBg;
 
   return (
-    <div style={{ background: C.surface, border: `2px solid ${open ? C.teal + "66" : C.border}`, borderRadius: 14, marginBottom: 12, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", transition: "border-color 0.2s" }}>
+    <div className="block-card" style={{ background: C.surface, border: `2px solid ${open ? C.teal + "66" : C.border}`, borderRadius: 14, marginBottom: 12, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", transition: "border-color 0.2s" }}>
 
       {/* Block header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 22px", cursor: "pointer", background: open ? "#f8fbfa" : "#fff" }} onClick={() => setOpen((o) => !o)}>
+      <div className="block-card-header" style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 22px", cursor: "pointer", background: open ? "#f8fbfa" : "#fff" }} onClick={() => setOpen((o) => !o)}>
         <div style={{ width: 52, height: 52, borderRadius: 12, background: accentBg, border: `2px solid ${accentColor}55`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <span style={{ fontSize: block.type === "standalone" ? 9 : 13, fontWeight: 700, color: accentColor, lineHeight: 1.1, textAlign: "center" }}>{block.type === "standalone" ? "UNIT" : "BLK"}</span>
           <span style={{ fontSize: 9, color: C.muted }}>{occ}/{total}</span>
@@ -59,7 +59,7 @@ export default function BlockCard({ block, requireAuth, onEndLease, onSaveTenant
       </div>
 
       {open && (
-        <div style={{ borderTop: `1px solid ${C.borderLight}`, padding: "18px 22px", background: C.deep }}>
+          <div className="block-card-body" style={{ borderTop: `1px solid ${C.borderLight}`, padding: "18px 22px", background: C.deep }}>
           <div className="block-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
             <SLabel>Rooms / Units in {block.name}</SLabel>
             <div style={{ display: "flex", gap: 8 }}>

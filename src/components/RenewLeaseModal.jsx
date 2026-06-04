@@ -31,7 +31,7 @@ export default function RenewLeaseModal({ tenantName, currentLeaseEnd, onConfirm
         </p>
 
         <div style={{ display: "grid", gap: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="renew-dates-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={lSt}>New Lease Start *</label>
               <input type="date" style={iSt} value={start} onChange={(e) => setStart(e.target.value)} />

@@ -238,7 +238,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                 ) : (
                   <>
                     <SLabel>Edit Profile</SLabel>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+                    <div className="tenant-edit-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
                       {PROF_FIELDS.map((f) => (
                         <div key={f.key}>
                           <label style={lSt}>{f.label}</label>

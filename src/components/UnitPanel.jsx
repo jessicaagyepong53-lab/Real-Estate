@@ -102,7 +102,7 @@ export default function UnitPanel({ unit, requireAuth, onEndLease, onSaveTenant,
           {showAdd && (
             <div style={{ background: C.sageBg, border: `1px solid ${C.sage}44`, borderRadius: 10, padding: "14px 16px", marginBottom: 14 }}>
               <SLabel color={C.sage}>New Tenant</SLabel>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className="add-tenant-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[
                   { l: "Full Name *",      k: "name"             },
                   { l: "Phone",            k: "phone"            },

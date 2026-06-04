@@ -3,9 +3,8 @@
  * Returns a partial tenant object with any fields it could find.
  * Fields not found are omitted (caller merges only what exists).
  */
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
+import * as pdfParseModule from 'pdf-parse/node';
+const pdfParse = pdfParseModule.default ?? pdfParseModule;
 
 // Parse a GHS amount string like "GHS 2,000" or "GH¢ 2,000" → number
 function parseGHS(str) {

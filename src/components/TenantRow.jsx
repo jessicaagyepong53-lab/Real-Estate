@@ -69,8 +69,20 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
     setShowRenewModal(false);
   }
   async function addDoc(file, cat, note) {
-    const newDoc = await uploadDocument(t.tid, file, cat, note);
-    setLocalDocs((prev) => [...prev, newDoc]);
+    const result = await uploadDocument(t.tid, file, cat, note);
+    setLocalDocs((prev) => [...prev, result]);
+    // Show toast if lease details were auto-extracted from the PDF
+    const ex = result._extracted;
+    if (ex && Object.keys(ex).length > 0) {
+      const lines = [];
+      if (ex.monthlyRent)   lines.push(`Monthly Rent: GHS ${Number(ex.monthlyRent).toLocaleString()}`);
+      if (ex.advanceMonths) lines.push(`Advance: ${ex.advanceMonths} months`);
+      if (ex.advanceAmount) lines.push(`Advance Amount: GHS ${Number(ex.advanceAmount).toLocaleString()}`);
+      if (ex.depositAmount) lines.push(`Security Deposit: GHS ${Number(ex.depositAmount).toLocaleString()}`);
+      if (ex.leaseStart)    lines.push(`Lease Start: ${ex.leaseStart}`);
+      if (ex.leaseEnd)      lines.push(`Lease End: ${ex.leaseEnd}`);
+      if (lines.length > 0) alert(`✅ Lease details auto-extracted from PDF:\n\n${lines.join('\n')}`);
+    }
   }
   async function delDoc(did) {
     try {

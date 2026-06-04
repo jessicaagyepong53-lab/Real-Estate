@@ -9,6 +9,7 @@ import { txBlock, txDoc } from '../utils/transform.js';
 import { verifyJWT } from '../middleware/auth.js';
 import cloudinary from '../config/cloudinary.js';
 import { broadcast } from '../socket.js';
+import { parseLease } from '../utils/parseLease.js';
 
 const router = express.Router();
 const upload = multer({
@@ -69,9 +70,43 @@ router.post('/tenants/:tid/documents', verifyJWT, upload.single('file'), async (
 
     await block.save();
 
-    // Return just the new document object
+    // ── Auto-extract lease details from PDF if this is a lease/tenancy agreement
+    let extracted = {};
+    const isPdf    = req.file.mimetype === 'application/pdf';
+    const isLease  = /lease|tenancy|rental.?agreement/i.test(req.file.originalname) ||
+                     /lease agreement/i.test(req.body.category || '');
+    if (isPdf && isLease) {
+      try {
+        extracted = await parseLease(req.file.buffer);
+        if (Object.keys(extracted).length > 0) {
+          // Re-fetch tenant (after block.save above) and apply only missing/zero fields
+          const freshBlock = await Block.findById(block._id);
+          let freshTenant = null;
+          for (const unit of freshBlock.units) {
+            freshTenant = unit.tenants.id(req.params.tid);
+            if (freshTenant) {
+              // Only fill in fields that are currently blank/zero
+              for (const [k, v] of Object.entries(extracted)) {
+                if (freshTenant[k] == null || freshTenant[k] === '' || freshTenant[k] === 0 || freshTenant[k] === false) {
+                  freshTenant[k] = v;
+                }
+              }
+              // Keep unit monthlyRent in sync
+              if (extracted.monthlyRent > 0 && !unit.monthlyRent) unit.monthlyRent = extracted.monthlyRent;
+              break;
+            }
+          }
+          await freshBlock.save();
+          broadcast('blocks:changed', null);
+        }
+      } catch (e) {
+        console.warn('[parseLease] extraction failed:', e.message);
+      }
+    }
+
+    // Return just the new document object + any extracted fields for frontend toast
     const newDoc = tenant.documents[tenant.documents.length - 1];
-    res.status(201).json(txDoc(newDoc));
+    res.status(201).json({ ...txDoc(newDoc), _extracted: extracted });
     broadcast('blocks:changed', null);
   } catch (err) { next(err); }
 });

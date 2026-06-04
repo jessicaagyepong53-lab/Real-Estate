@@ -127,11 +127,10 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                   if (isImg) {
                     setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: true });
                   } else {
-                    // All non-image docs (PDF, Office) go through the proxy.
-                    // Proxy serves with Content-Disposition:inline so browser renders natively.
-                    // Using iframe inside the modal avoids popup-blocker issues.
+                    // Use Google Docs Viewer with the public Cloudinary URL — no proxy needed
+                    const gdocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true`;
                     setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false,
-                      iframeUrl: `${API}/api/documents/${doc.did}/file` });
+                      iframeUrl: gdocsUrl });
                   }
                 };
                 if (requireAuth) requireAuth(run); else run();
@@ -206,9 +205,10 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
               </div>
             ) : (
               <iframe
+                key={docViewer.iframeUrl}
                 src={docViewer.iframeUrl}
                 title={docViewer.name}
-                style={{ flex: 1, border: "none", width: "100%" }}
+                style={{ flex: 1, border: "none", width: "100%", background: "#fff" }}
                 allow="fullscreen"
               />
             )}

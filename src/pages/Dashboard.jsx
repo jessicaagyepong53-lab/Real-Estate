@@ -55,7 +55,10 @@ export default function Dashboard({ totalRev, totalMonthlyRent, occupiedUnits, a
 
   const scopeTotals = scopeUnits.reduce((acc, u) => {
     const maintCost = maint.filter((m) => m.unitId === u.uid).reduce((s, m) => s + (m.cost || 0), 0);
-    const rentPaid  = u.tenants.reduce((s, t) => s + Math.max(0, (Number(t.advanceAmount) > 0 ? Number(t.advanceAmount) : 0) - (Number(t.refundAmount) || 0)), 0);
+    const rentPaid  = u.tenants.reduce((s, t) => {
+      const logTotal = (t.payments || []).reduce((ps, p) => ps + (Number(p.amount) || 0), 0);
+      return s + Math.max(0, (logTotal > 0 ? logTotal : (Number(t.advanceAmount) > 0 ? Number(t.advanceAmount) : 0)) - (Number(t.refundAmount) || 0));
+    }, 0);
     const depPaid   = u.tenants.reduce((s, t) => s + (t.depositPaid ? (t.depositAmount != null ? Number(t.depositAmount) : u.monthlyRent) : 0), 0);
     return { rentPaid: acc.rentPaid + rentPaid, depPaid: acc.depPaid + depPaid, maintCost: acc.maintCost + maintCost };
   }, { rentPaid: 0, depPaid: 0, maintCost: 0 });
@@ -161,7 +164,11 @@ export default function Dashboard({ totalRev, totalMonthlyRent, occupiedUnits, a
                 )];
                 return u.tenants.map((t, i) => {
                   const isActive = t.leaseStatus === "active";
-                  const rentPaid = Math.max(0, (Number(t.advanceAmount) > 0 ? Number(t.advanceAmount) : 0) - (Number(t.refundAmount) || 0));
+                  const logTotal = (t.payments || []).reduce((ps, p) => ps + (Number(p.amount) || 0), 0);
+                  const rentPaid = Math.max(0,
+                    (logTotal > 0 ? logTotal : (Number(t.advanceAmount) > 0 ? Number(t.advanceAmount) : 0))
+                    - (Number(t.refundAmount) || 0)
+                  );
                   const depAmt   = t.depositAmount != null ? Number(t.depositAmount) : u.monthlyRent;
                   const depPaid  = t.depositPaid ? depAmt : 0;
                   const balance  = isActive ? (Number(t.balanceOwed) || 0) : 0;

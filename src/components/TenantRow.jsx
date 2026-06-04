@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { uploadDocument, deleteDocument } from "../api/documents.js";
-import { renewTenant } from "../api/blocks.js";
+import { renewTenant, addPayment, removePayment } from "../api/blocks.js";
 import { C } from "../constants/colors";
 import { PROF_FIELDS } from "../constants/options";
 import { useToast } from "./Toast";
@@ -26,7 +26,12 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
   const [showEndModal,       setShowEndModal]       = useState(false);
   const [showRenewModal,     setShowRenewModal]     = useState(false);
   const [showTerminateModal, setShowTerminateModal] = useState(false);
-  const [localDocs, setLocalDocs] = useState(t.documents || []);
+  const [localDocs,     setLocalDocs]     = useState(t.documents || []);
+  const [localPayments, setLocalPayments] = useState(t.payments  || []);
+  const [newPayAmt,     setNewPayAmt]     = useState("");
+  const [newPayDate,    setNewPayDate]    = useState(today.toISOString().slice(0, 10));
+  const [newPayNote,    setNewPayNote]    = useState("");
+  const [payLoading,    setPayLoading]    = useState(false);
 
   const effStatus = getLeaseStatus(t); // 'active' | 'expired' | 'ended' | 'cancelled'
   const isExpired = effStatus === 'expired';
@@ -68,6 +73,28 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
   }
   function handleEndLease(reason, endDate) { onEndLease(t.tid, reason, endDate); setShowEndModal(false); }
   function handleTerminateLease(reason, endDate, refundAmount) { onTerminateLease(t.tid, reason, endDate, refundAmount); setShowTerminateModal(false); }
+
+  async function handleAddPayment() {
+    if (!newPayAmt || !newPayDate) return;
+    setPayLoading(true);
+    try {
+      const block = await addPayment(t.tid, { amount: Number(newPayAmt), date: newPayDate, note: newPayNote.trim() });
+      const updated = block.units.flatMap((u) => u.tenants).find((x) => x.tid === t.tid);
+      if (updated) setLocalPayments(updated.payments || []);
+      setNewPayAmt(""); setNewPayNote("");
+      toast("Payment recorded.", "save");
+    } catch { toast("Failed to record payment.", "error"); }
+    setPayLoading(false);
+  }
+
+  async function handleRemovePayment(pid) {
+    try {
+      const block = await removePayment(t.tid, pid);
+      const updated = block.units.flatMap((u) => u.tenants).find((x) => x.tid === t.tid);
+      if (updated) setLocalPayments(updated.payments || []);
+      toast("Payment removed.", "delete");
+    } catch { toast("Failed to remove payment.", "error"); }
+  }
   async function handleRenew(data) {
     try {
       const block = await renewTenant(t.tid, data);
@@ -187,7 +214,8 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
         {open && (
           <div style={{ borderTop: `1px solid ${C.borderLight}`, background: C.deep }}>
             <div className="tenant-tab-bar" style={{ display: "flex", gap: 2, padding: "10px 15px 0", background: C.panel, borderBottom: `1px solid ${C.borderLight}` }}>
-              <TabBtn id="profile" label="Profile & Details" />
+              <TabBtn id="profile"   label="Profile & Details" />
+              <TabBtn id="payments"  label="Payments" count={localPayments.length} />
               <TabBtn id="documents" label="Documents" count={localDocs.length} />
             </div>
 
@@ -240,7 +268,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
                     </div>
 
                     {/* Rent & Financials card */}
-                    {(t.monthlyRent > 0 || t.advanceMonths > 0 || t.balanceOwed > 0) && (() => {
+                    {(t.monthlyRent > 0 || t.advanceMonths > 0 || t.balanceOwed > 0 || localPayments.length > 0) && (() => {
                       const rent         = Number(t.monthlyRent)   || 0;
                       const adv          = Number(t.advanceMonths) || 0;
                       const advAmt       = adv * rent;
@@ -248,6 +276,8 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
                       const total        = advAmt + secDep;
                       const balance      = Number(t.balanceOwed)   || 0;
                       const received     = total - balance;
+                      const logTotal     = localPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+                      const hasLog       = logTotal > 0;
                       // Months actually paid = rent received ÷ monthly rent
                       const rentReceived = t.depositPaid ? Math.max(0, received - secDep) : received;
                       const monthsPaid   = rent > 0 ? Math.floor(rentReceived / rent) : 0;
@@ -265,7 +295,14 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
                             </>}
                             {balance > 0 && <><span style={{ color: C.rose, fontWeight: 700 }}>Balance Owed</span><span style={{ color: C.rose, fontWeight: 700, textAlign: "right" }}>GHS {balance.toLocaleString()}</span></>}
                             {balance > 0 && <><span style={{ color: C.sage, fontWeight: 700 }}>Amount Received</span><span style={{ color: C.sage, fontWeight: 700, textAlign: "right" }}>GHS {received.toLocaleString()}</span></>}
-                            {t.lastPaymentDate && <><span style={{ color: C.muted }}>Last Payment</span><span style={{ color: C.sage, textAlign: "right" }}>GHS {(Number(t.lastPaymentAmount)||0).toLocaleString()} — {t.lastPaymentDate}</span></>}
+                            {t.lastPaymentDate && !hasLog && <><span style={{ color: C.muted }}>Last Payment</span><span style={{ color: C.sage, textAlign: "right" }}>GHS {(Number(t.lastPaymentAmount)||0).toLocaleString()} — {t.lastPaymentDate}</span></>}
+                            {hasLog && <>
+                              <span
+                                style={{ color: C.sky, fontWeight: 700, borderTop: `1px solid ${C.sky}33`, paddingTop: 5, cursor: "pointer" }}
+                                onClick={() => setActiveTab("payments")}
+                              >💰 Payment Log ({localPayments.length})</span>
+                              <span style={{ color: C.sky, fontWeight: 700, textAlign: "right", borderTop: `1px solid ${C.sky}33`, paddingTop: 5 }}>GHS {logTotal.toLocaleString()}</span>
+                            </>}
                             {Number(t.refundAmount) > 0 && <><span style={{ color: C.amber, fontWeight: 700, borderTop: `1px solid ${C.amber}33`, paddingTop: 5 }}>⛔ Refund Paid Out</span><span style={{ color: C.amber, fontWeight: 700, textAlign: "right", borderTop: `1px solid ${C.amber}33`, paddingTop: 5 }}>− GHS {Number(t.refundAmount).toLocaleString()}</span></>}
                           </div>
                         </div>
@@ -425,6 +462,86 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
               {activeTab === "documents" && (
                 <DocumentVault docs={localDocs} onAdd={addDoc} onDelete={delDoc} requireAuth={requireAuth} />
               )}
+
+              {/* PAYMENTS TAB */}
+              {activeTab === "payments" && (() => {
+                const totalPaid   = localPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+                const rent        = Number(t.monthlyRent) || 0;
+                const expected    = (Number(t.advanceMonths) || 0) * rent + (Number(t.depositAmount) || rent);
+                const balance     = Number(t.balanceOwed) || 0;
+                const sorted      = [...localPayments].sort((a, b) => (a.date > b.date ? -1 : 1));
+                return (
+                  <>
+                    {/* Summary banner */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 8, marginBottom: 16 }}>
+                      {[
+                        { l: "Total Paid",     v: `GHS ${totalPaid.toLocaleString()}`,    c: C.teal   },
+                        { l: "Payments",       v: localPayments.length,                   c: C.sage   },
+                        { l: "Balance Owed",   v: `GHS ${balance.toLocaleString()}`,       c: balance > 0 ? C.rose : C.sage },
+                        { l: "Contract Total", v: expected > 0 ? `GHS ${expected.toLocaleString()}` : "—", c: C.lavender },
+                      ].map(({ l, v, c }) => (
+                        <div key={l} style={{ background: C.surface, border: `1px solid ${c}44`, borderRadius: 8, padding: "10px 13px" }}>
+                          <div style={{ fontSize: 10, color: C.muted, letterSpacing: 1.1, textTransform: "uppercase", marginBottom: 3 }}>{l}</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: c }}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add payment form */}
+                    {isCurrent && (
+                      <div style={{ background: C.tealBg, border: `1px solid ${C.teal}33`, borderRadius: 8, padding: "12px 14px", marginBottom: 14 }}>
+                        <div style={{ fontSize: 11, color: C.teal, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>+ Record New Payment</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          <div>
+                            <label style={lSt}>Date</label>
+                            <input type="date" style={iSt} value={newPayDate} onChange={(e) => setNewPayDate(e.target.value)} />
+                          </div>
+                          <div>
+                            <label style={lSt}>Amount (GHS)</label>
+                            <input type="number" min="0" style={iSt} value={newPayAmt} onChange={(e) => setNewPayAmt(e.target.value)} placeholder="e.g. 2000" />
+                          </div>
+                          <div style={{ gridColumn: "1/-1" }}>
+                            <label style={lSt}>Note (optional)</label>
+                            <input type="text" style={iSt} value={newPayNote} onChange={(e) => setNewPayNote(e.target.value)} placeholder="e.g. Monthly rent — June, Partial payment…" />
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+                          <Btn small onClick={() => requireAuth(handleAddPayment)} disabled={payLoading || !newPayAmt || !newPayDate}>
+                            {payLoading ? "Saving…" : "Save Payment"}
+                          </Btn>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment history */}
+                    {sorted.length === 0 ? (
+                      <div style={{ textAlign: "center", color: C.faint, fontSize: 13, padding: "24px 0" }}>No payments recorded yet.</div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {sorted.map((p, i) => (
+                          <div key={p.pid || i} style={{ display: "flex", alignItems: "center", gap: 10, background: C.surface, border: `1px solid ${C.borderLight}`, borderRadius: 7, padding: "8px 12px" }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: 700, color: C.teal, fontSize: 14 }}>GHS {Number(p.amount).toLocaleString()}</span>
+                                <span style={{ fontSize: 12, color: C.muted }}>{fmtDate(p.date)}</span>
+                                {i === 0 && <span style={{ fontSize: 10, background: C.tealBg, color: C.teal, borderRadius: 4, padding: "1px 6px", fontWeight: 600 }}>Latest</span>}
+                              </div>
+                              {p.note && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{p.note}</div>}
+                            </div>
+                            {isCurrent && (
+                              <button
+                                onClick={() => requireAuth(() => handleRemovePayment(p.pid))}
+                                style={{ background: "none", border: "none", color: C.rose, cursor: "pointer", fontSize: 15, padding: "2px 6px", borderRadius: 4, lineHeight: 1 }}
+                                title="Remove payment"
+                              >✕</button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}

@@ -96,7 +96,10 @@ export default function App() {
   }, 0);
   const totalRefunds  = allTenants.reduce((s, t) => s + (Number(t.refundAmount) || 0), 0);
   const totalRentPaid = allTenants.reduce((s, t) => {
-    if (Number(t.advanceAmount) > 0) return s + Number(t.advanceAmount);
+    const payments   = t.payments || [];
+    const logTotal   = payments.reduce((ps, p) => ps + (Number(p.amount) || 0), 0);
+    if (logTotal > 0)                 return s + logTotal;
+    if (Number(t.advanceAmount) > 0)  return s + Number(t.advanceAmount);
     if (!t.leaseStart) return s;
     const start  = new Date(t.leaseStart);
     const cap    = t.leaseEnd ? new Date(Math.min(new Date(t.leaseEnd), today)) : today;

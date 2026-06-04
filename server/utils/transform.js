@@ -6,13 +6,20 @@ function txDoc(d) {
   return { did: _id.toString(), ...rest };
 }
 
+function txPayment(p) {
+  const obj = p.toObject ? p.toObject() : p;
+  const { _id, ...rest } = obj;
+  return { pid: _id.toString(), ...rest };
+}
+
 function txTenant(t) {
   const obj = t.toObject ? t.toObject() : t;
   const { _id, __v, ...rest } = obj;
   return {
     tid: _id.toString(),
     ...rest,
-    documents: (rest.documents || []).map(txDoc),
+    payments:     (rest.payments     || []).map(txPayment),
+    documents:    (rest.documents    || []).map(txDoc),
     leaseHistory: (rest.leaseHistory || []).map((h) => ({
       ...h,
       documents: (h.documents || []).map(txDoc),

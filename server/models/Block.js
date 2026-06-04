@@ -16,6 +16,12 @@ const DocumentSchema = new Schema({
   uploadedAt:       { type: Date, default: Date.now },
 }, { _id: true });
 
+const PaymentSchema = new Schema({
+  amount: { type: Number, required: true },
+  date:   { type: String, required: true },
+  note:   { type: String, default: '' },
+}, { _id: true });
+
 const LeaseHistorySchema = new Schema({
   leaseStart:    String,
   leaseEnd:      String,
@@ -62,6 +68,7 @@ const TenantSchema = new Schema({
   lastPaymentAmount:   { type: Number, default: 0 },
   lastPaymentDate:     String,
   refundAmount:        { type: Number, default: 0 },  // amount refunded to tenant on termination
+  payments:          { type: [PaymentSchema], default: [] },
   leaseHistory:      [LeaseHistorySchema],
   documents:         [DocumentSchema],
 }, { _id: true });

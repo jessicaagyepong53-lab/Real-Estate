@@ -203,6 +203,55 @@ router.delete('/tenants/:tid', verifyJWT, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/tenants/:tid/payments — record a payment
+router.post('/tenants/:tid/payments', verifyJWT, async (req, res, next) => {
+  try {
+    const block = await Block.findOne({ 'units.tenants._id': new mongoose.Types.ObjectId(req.params.tid) });
+    if (!block) return res.status(404).json({ error: 'Tenant not found' });
+    let tenant = null;
+    for (const unit of block.units) {
+      tenant = unit.tenants.id(req.params.tid);
+      if (tenant) break;
+    }
+    const { amount, date, note } = req.body;
+    if (!amount || !date) return res.status(400).json({ error: 'amount and date are required' });
+    tenant.payments.push({ amount: Number(amount), date, note: note || '' });
+    // Keep lastPaymentDate / lastPaymentAmount in sync with most recent entry
+    const sorted = [...tenant.payments].sort((a, b) => (a.date > b.date ? -1 : 1));
+    tenant.lastPaymentAmount = sorted[0].amount;
+    tenant.lastPaymentDate   = sorted[0].date;
+    await block.save();
+    res.status(201).json(txBlock(block));
+    broadcast('blocks:changed', null);
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/tenants/:tid/payments/:pid — remove a payment
+router.delete('/tenants/:tid/payments/:pid', verifyJWT, async (req, res, next) => {
+  try {
+    const block = await Block.findOne({ 'units.tenants._id': new mongoose.Types.ObjectId(req.params.tid) });
+    if (!block) return res.status(404).json({ error: 'Tenant not found' });
+    let tenant = null;
+    for (const unit of block.units) {
+      tenant = unit.tenants.id(req.params.tid);
+      if (tenant) break;
+    }
+    tenant.payments.pull(req.params.pid);
+    // Re-sync lastPaymentDate / lastPaymentAmount
+    if (tenant.payments.length > 0) {
+      const sorted = [...tenant.payments].sort((a, b) => (a.date > b.date ? -1 : 1));
+      tenant.lastPaymentAmount = sorted[0].amount;
+      tenant.lastPaymentDate   = sorted[0].date;
+    } else {
+      tenant.lastPaymentAmount = 0;
+      tenant.lastPaymentDate   = null;
+    }
+    await block.save();
+    res.json(txBlock(block));
+    broadcast('blocks:changed', null);
+  } catch (err) { next(err); }
+});
+
 // POST /api/tenants/:tid/renew — archive current lease period, apply new one
 router.post('/tenants/:tid/renew', verifyJWT, async (req, res, next) => {
   try {

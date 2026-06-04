@@ -13,3 +13,6 @@ export const addTenant     = (uid, data) => API.post(`/units/${uid}/tenants`, da
 export const updateTenant  = (tid, data) => API.put(`/tenants/${tid}`, data).then(r => r.data);
 export const renewTenant   = (tid, data) => API.post(`/tenants/${tid}/renew`, data).then(r => r.data);
 export const deleteTenant  = (tid)       => API.delete(`/tenants/${tid}`).then(r => r.data);
+
+export const addPayment    = (tid, data) => API.post(`/tenants/${tid}/payments`, data).then(r => r.data);
+export const removePayment = (tid, pid)  => API.delete(`/tenants/${tid}/payments/${pid}`).then(r => r.data);

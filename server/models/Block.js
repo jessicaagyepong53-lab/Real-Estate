@@ -3,15 +3,16 @@ import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
 const DocumentSchema = new Schema({
-  name:         { type: String, required: true },
-  mimeType:     String,
-  size:         Number,
-  category:     { type: String, default: 'Other' },
-  note:         String,
-  leasePeriod:  String, // e.g. "2025–2026" — auto-set on upload
-  cloudinaryId: String,
-  url:          String,
-  uploadedAt:   { type: Date, default: Date.now },
+  name:             { type: String, required: true },
+  mimeType:         String,
+  size:             Number,
+  category:         { type: String, default: 'Other' },
+  note:             String,
+  leasePeriod:      String, // e.g. "2025–2026" — auto-set on upload
+  cloudinaryId:     String,
+  cloudinaryType:   String, // 'image' | 'raw' | 'video' — from result.resource_type
+  url:              String,
+  uploadedAt:       { type: Date, default: Date.now },
 }, { _id: true });
 
 const LeaseHistorySchema = new Schema({

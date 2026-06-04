@@ -171,4 +171,61 @@ router.get('/documents/:did/file', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/documents/:did/debug — returns raw diagnostic info as JSON (JWT required)
+router.get('/documents/:did/debug', verifyJWT, async (req, res, next) => {
+  try {
+    const cloudName  = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey     = process.env.CLOUDINARY_API_KEY;
+    const apiSecret  = process.env.CLOUDINARY_API_SECRET;
+
+    const block = await Block.findOne({
+      'units.tenants.documents._id': new mongoose.Types.ObjectId(req.params.did),
+    });
+    if (!block) return res.json({ error: 'Document not found in DB' });
+
+    let doc = null;
+    outer: for (const unit of block.units) {
+      for (const tenant of unit.tenants) {
+        const d = tenant.documents.id(req.params.did);
+        if (d) { doc = d; break outer; }
+      }
+    }
+    if (!doc) return res.json({ error: 'Doc not found' });
+
+    const urlPath = new URL(doc.url).pathname;
+    const lastSeg = urlPath.split('/').pop();
+    const dotIdx  = lastSeg.lastIndexOf('.');
+    const format  = dotIdx > 0 ? lastSeg.slice(dotIdx + 1) : '';
+
+    const results = {};
+    // Try direct fetch first (no auth)
+    const directR = await fetch(doc.url);
+    results.directFetch = { status: directR.status, body: (await directR.text()).slice(0, 200) };
+
+    // Try each resource type with private_download_url
+    for (const rt of ['image', 'raw', 'video']) {
+      const su = cloudinary.utils.private_download_url(doc.cloudinaryId, format, { resource_type: rt, attachment: false });
+      const r  = await fetch(su);
+      const b  = await r.text().catch(() => '');
+      results[`private_dl_${rt}`] = { url: su, status: r.status, body: b.slice(0, 300) };
+    }
+
+    // Try Admin API resource lookup
+    for (const rt of ['image', 'raw', 'video']) {
+      try {
+        const info = await cloudinary.api.resource(doc.cloudinaryId, { resource_type: rt });
+        results[`admin_api_${rt}`] = { found: true, secure_url: info.secure_url, resource_type: info.resource_type };
+      } catch (e) {
+        results[`admin_api_${rt}`] = { found: false, error: e.message };
+      }
+    }
+
+    res.json({
+      env: { cloudName, apiKey: apiKey ? 'SET' : 'MISSING', apiSecret: apiSecret ? 'SET' : 'MISSING' },
+      doc: { cloudinaryId: doc.cloudinaryId, cloudinaryType: doc.cloudinaryType, url: doc.url, format },
+      results,
+    });
+  } catch (err) { next(err); }
+});
+
 export default router;

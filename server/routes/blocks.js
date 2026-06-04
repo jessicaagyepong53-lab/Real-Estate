@@ -160,7 +160,7 @@ router.put('/tenants/:tid', verifyJWT, async (req, res, next) => {
     }
     const { tid, documents, _id, ...updates } = req.body;
     // Coerce number fields sent as strings
-    for (const f of ['monthlyRent', 'advanceMonths', 'advanceAmount', 'depositAmount']) {
+    for (const f of ['monthlyRent', 'advanceMonths', 'advanceAmount', 'depositAmount', 'balanceOwed']) {
       if (updates[f] != null) updates[f] = Number(updates[f]);
     }
     Object.assign(tenant, updates);
@@ -213,21 +213,37 @@ router.post('/tenants/:tid/renew', verifyJWT, async (req, res, next) => {
       tenant = unit.tenants.id(req.params.tid);
       if (tenant) break;
     }
-    // Archive the current lease period into history
+    // Archive the full current lease period into history
     if (!tenant.leaseHistory) tenant.leaseHistory = [];
     tenant.leaseHistory.push({
       leaseStart:    tenant.leaseStart,
       leaseEnd:      tenant.leaseEnd,
       depositPaid:   tenant.depositPaid,
       depositAmount: tenant.depositAmount,
+      monthlyRent:   tenant.monthlyRent,
+      advanceMonths: tenant.advanceMonths,
+      advanceAmount: tenant.advanceAmount,
+      balanceOwed:   tenant.balanceOwed || 0,
       renewedAt:     new Date().toISOString().slice(0, 10),
     });
-    // Apply the new lease period
-    tenant.leaseStart   = req.body.leaseStart;
-    tenant.leaseEnd     = req.body.leaseEnd     || null;
-    tenant.depositPaid  = req.body.depositPaid  ?? tenant.depositPaid;
-    tenant.depositAmount = req.body.depositAmount != null ? Number(req.body.depositAmount) : tenant.depositAmount;
-    tenant.leaseStatus  = 'active';
+    // Apply the new lease period — reset financials for new term
+    tenant.leaseStart     = req.body.leaseStart;
+    tenant.leaseEnd       = req.body.leaseEnd       || null;
+    tenant.depositPaid    = req.body.depositPaid    ?? false;
+    tenant.depositAmount  = req.body.depositAmount  != null ? Number(req.body.depositAmount)  : 0;
+    tenant.monthlyRent    = req.body.monthlyRent    != null ? Number(req.body.monthlyRent)    : tenant.monthlyRent;
+    tenant.advanceMonths  = req.body.advanceMonths  != null ? Number(req.body.advanceMonths)  : 0;
+    tenant.advanceAmount  = req.body.advanceMonths && tenant.monthlyRent
+      ? Number(req.body.advanceMonths) * tenant.monthlyRent
+      : (req.body.advanceAmount != null ? Number(req.body.advanceAmount) : 0);
+    tenant.balanceOwed    = req.body.balanceOwed    != null ? Number(req.body.balanceOwed)    : 0;
+    tenant.leaseStatus    = 'active';
+    // Sync unit monthlyRent
+    if (req.body.monthlyRent > 0) {
+      for (const unit of block.units) {
+        if (unit.tenants.id(req.params.tid)) { unit.monthlyRent = tenant.monthlyRent; break; }
+      }
+    }
     await block.save();
     res.json(txBlock(block));
     broadcast('blocks:changed', null);

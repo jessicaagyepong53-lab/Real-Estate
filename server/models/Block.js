@@ -21,7 +21,11 @@ const LeaseHistorySchema = new Schema({
   leaseEnd:      String,
   depositPaid:   Boolean,
   depositAmount: Number,
-  renewedAt:     String, // date the renewal was processed
+  monthlyRent:   Number,
+  advanceMonths: Number,
+  advanceAmount: Number,
+  balanceOwed:   { type: Number, default: 0 },
+  renewedAt:     String,
 }, { _id: false });
 
 const TenantSchema = new Schema({
@@ -50,7 +54,8 @@ const TenantSchema = new Schema({
   monthlyRent:       { type: Number, default: 0 },
   advanceMonths:     { type: Number, default: 0 },
   advanceAmount:     { type: Number, default: 0 },
-  leaseHistory:      [LeaseHistorySchema], // archived previous lease periods
+  balanceOwed:       { type: Number, default: 0 },
+  leaseHistory:      [LeaseHistorySchema],
   documents:         [DocumentSchema],
 }, { _id: true });
 

@@ -59,7 +59,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
     const rent = Number(draft.monthlyRent) || 0;
     const adv  = Number(draft.advanceMonths) || 0;
     const computed = rent > 0 ? { advanceAmount: adv * rent, depositAmount: rent, depositPaid: true } : {};
-    onSave({ ...draft, ...computed });
+    onSave({ ...draft, ...computed, balanceOwed: Number(draft.balanceOwed) || 0 });
     setEditing(false);
     toast("Profile saved.", "save");
   }
@@ -114,7 +114,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
   return (
     <>
       {showEndModal   && <EndLeaseModal   tenantName={t.name} onConfirm={handleEndLease} onClose={() => setShowEndModal(false)} />}
-      {showRenewModal && <RenewLeaseModal tenantName={t.name} currentLeaseEnd={t.leaseEnd} onConfirm={handleRenew} onClose={() => setShowRenewModal(false)} />}
+      {showRenewModal && <RenewLeaseModal tenantName={t.name} currentLeaseEnd={t.leaseEnd} currentMonthlyRent={t.monthlyRent} onConfirm={handleRenew} onClose={() => setShowRenewModal(false)} />}
 
       <div style={{ background: isCurrent ? "#fff" : C.panel, border: `1px solid ${isCurrent ? C.border : C.borderLight}`, borderRadius: 10, marginBottom: 7, overflow: "hidden", boxShadow: isCurrent ? "0 1px 6px rgba(74,157,143,0.08)" : "none" }}>
 
@@ -226,12 +226,13 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                     </div>
 
                     {/* Rent & Financials card */}
-                    {(t.monthlyRent > 0 || t.advanceMonths > 0) && (() => {
-                      const rent   = Number(t.monthlyRent)   || 0;
-                      const adv    = Number(t.advanceMonths) || 0;
-                      const advAmt = adv * rent;
-                      const secDep = Number(t.depositAmount) || rent;
-                      const total  = advAmt + secDep;
+                    {(t.monthlyRent > 0 || t.advanceMonths > 0 || t.balanceOwed > 0) && (() => {
+                      const rent    = Number(t.monthlyRent)   || 0;
+                      const adv     = Number(t.advanceMonths) || 0;
+                      const advAmt  = adv * rent;
+                      const secDep  = Number(t.depositAmount) || rent;
+                      const total   = advAmt + secDep;
+                      const balance = Number(t.balanceOwed)   || 0;
                       return (
                         <div style={{ background: C.sageBg, border: `1px solid ${C.sage}33`, borderRadius: 8, padding: "9px 13px", marginBottom: 9 }}>
                           <div style={{ fontSize: 10, color: C.sage, letterSpacing: 1.1, textTransform: "uppercase", marginBottom: 6, fontWeight: 700 }}>Rent & Financials</div>
@@ -241,9 +242,11 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                             {adv > 0 && <><span style={{ color: C.muted }}>Advance Paid ({adv} month{adv !== 1 ? "s" : ""})</span><span style={{ fontWeight: 600, color: C.text, textAlign: "right" }}>GHS {advAmt.toLocaleString()}</span></>}
                             {secDep > 0 && <><span style={{ color: C.muted }}>Security Deposit (1 month)</span><span style={{ fontWeight: 600, color: C.text, textAlign: "right" }}>{t.depositPaid ? "✓ " : "✗ "}GHS {secDep.toLocaleString()}</span></>}
                             {adv > 0 && <>
-                              <span style={{ color: C.teal, fontWeight: 700, borderTop: `1px solid ${C.teal}33`, paddingTop: 5 }}>Total Received</span>
+                              <span style={{ color: C.teal, fontWeight: 700, borderTop: `1px solid ${C.teal}33`, paddingTop: 5 }}>Total Expected</span>
                               <span style={{ color: C.teal, fontWeight: 700, textAlign: "right", borderTop: `1px solid ${C.teal}33`, paddingTop: 5 }}>GHS {total.toLocaleString()}</span>
                             </>}
+                            {balance > 0 && <><span style={{ color: C.rose, fontWeight: 700 }}>Balance Owed</span><span style={{ color: C.rose, fontWeight: 700, textAlign: "right" }}>GHS {balance.toLocaleString()}</span></>}
+                            {balance > 0 && <><span style={{ color: C.sage, fontWeight: 700 }}>Amount Received</span><span style={{ color: C.sage, fontWeight: 700, textAlign: "right" }}>GHS {(total - balance).toLocaleString()}</span></>}
                           </div>
                         </div>
                       );
@@ -273,15 +276,25 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                           const sy = h.leaseStart ? new Date(h.leaseStart).getFullYear() : "?";
                           const ey = h.leaseEnd   ? new Date(h.leaseEnd).getFullYear()   : "?";
                           const period = sy === ey ? `${sy}` : `${sy}–${ey}`;
+                          const rent   = Number(h.monthlyRent)   || 0;
+                          const adv    = Number(h.advanceMonths) || 0;
+                          const advAmt = Number(h.advanceAmount) || adv * rent;
+                          const dep    = Number(h.depositAmount) || 0;
+                          const bal    = Number(h.balanceOwed)   || 0;
                           return (
-                            <div key={i} style={{ background: C.lavBg, border: `1px solid ${C.lavender}22`, borderRadius: 7, padding: "8px 12px", marginBottom: 5, fontSize: 12 }}>
-                              <span style={{ fontWeight: 700, color: C.lavender, marginRight: 8 }}>{period}</span>
-                              <span style={{ color: C.text }}>{fmtDate(h.leaseStart)} → {fmtDate(h.leaseEnd)}</span>
-                              <span style={{ color: C.muted, marginLeft: 10 }}>
-                                {h.depositPaid ? "✓ Dep. Paid" : "✗ Dep. Pending"}
-                                {h.depositAmount > 0 && ` — GHS ${Number(h.depositAmount).toLocaleString()}`}
-                              </span>
-                              {h.renewedAt && <span style={{ color: C.faint, marginLeft: 8, fontSize: 11 }}>Renewed {fmtDate(h.renewedAt)}</span>}
+                            <div key={i} style={{ background: C.lavBg, border: `1px solid ${C.lavender}22`, borderRadius: 7, padding: "10px 12px", marginBottom: 6, fontSize: 12 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                                <span style={{ fontWeight: 700, color: C.lavender }}>{period}</span>
+                                <span style={{ color: C.muted }}>{fmtDate(h.leaseStart)} → {fmtDate(h.leaseEnd)}</span>
+                                {h.renewedAt && <span style={{ color: C.faint, fontSize: 11, marginLeft: "auto" }}>Renewed {fmtDate(h.renewedAt)}</span>}
+                              </div>
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: "3px 12px", color: C.muted }}>
+                                {rent > 0  && <span>Rent: <b style={{ color: C.text }}>GHS {rent.toLocaleString()}/mo</b></span>}
+                                {adv > 0   && <span>Advance: <b style={{ color: C.text }}>{adv} mo</b></span>}
+                                {advAmt > 0 && <span>Advance Paid: <b style={{ color: C.text }}>GHS {advAmt.toLocaleString()}</b></span>}
+                                {dep > 0   && <span>Deposit: <b style={{ color: C.text }}>{h.depositPaid ? "✓ " : "✗ "}GHS {dep.toLocaleString()}</b></span>}
+                                {bal > 0   && <span>Balance Owed: <b style={{ color: C.rose }}>GHS {bal.toLocaleString()}</b></span>}
+                              </div>
                             </div>
                           );
                         })}
@@ -315,6 +328,10 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onSav
                       <div>
                         <label style={lSt}>Months Advance Paid</label>
                         <input type="number" min="0" style={iSt} value={draft.advanceMonths || ""} onChange={(e) => setDraft((p) => ({ ...p, advanceMonths: e.target.value }))} />
+                      </div>
+                      <div style={{ gridColumn: "1/-1" }}>
+                        <label style={lSt}>Balance Still Owed (GHS) <span style={{ color: C.faint, fontWeight: 400 }}>— 0 if fully paid</span></label>
+                        <input type="number" min="0" style={iSt} value={draft.balanceOwed || ""} onChange={(e) => setDraft((p) => ({ ...p, balanceOwed: e.target.value }))} placeholder="0" />
                       </div>
                     </div>
                     {Number(draft.monthlyRent) > 0 && (() => {

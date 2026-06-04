@@ -126,27 +126,41 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
                   if (!doc.did) return;
                   if (isImg) {
                     setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: true });
-                  } else if (isOffice) {
-                    // Microsoft Office Online handles Word/Excel natively
-                    const msUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(doc.url)}`;
-                    setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false, iframeUrl: msUrl });
                   } else {
-                    // PDFs: use direct Cloudinary URL — Chrome/Edge/Firefox render natively in iframe
-                    setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false, iframeUrl: doc.url });
+                    // Proxy the file through our server (handles Cloudinary auth + signed URLs).
+                    // Pass JWT as query param since iframes can't send custom headers.
+                    const token = localStorage.getItem("estatepro_token") || "";
+                    const proxyUrl = `${API}/api/documents/${doc.did}/file?token=${encodeURIComponent(token)}`;
+                    if (isOffice) {
+                      // MS Office Online wraps our proxy URL
+                      const msUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(proxyUrl)}`;
+                      setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false, iframeUrl: msUrl });
+                    } else {
+                      setDocViewer({ did: doc.did, url: doc.url, name: doc.name, isImg: false, iframeUrl: proxyUrl });
+                    }
                   }
                 };
                 if (requireAuth) requireAuth(run); else run();
               }
 
-              function downloadDoc() {
-                const run = () => {
-                  // Same-origin proxy URL — 'download' attribute works, correct filename preserved
-                  const a = document.createElement("a");
-                  a.href = `${API}/api/documents/${doc.did}/file?dl=1`;
-                  a.download = doc.name;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
+              async function downloadDoc() {
+                const run = async () => {
+                  try {
+                    const token = localStorage.getItem("estatepro_token") || "";
+                    const res = await fetch(`${API}/api/documents/${doc.did}/file?dl=1`, {
+                      headers: { Authorization: `Bearer ${token}` },
+                    });
+                    if (!res.ok) throw new Error("Download failed");
+                    const blob = await res.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = blobUrl;
+                    a.download = doc.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(blobUrl);
+                  } catch { alert("Download failed — please try again."); }
                 };
                 if (requireAuth) requireAuth(run); else run();
               }
@@ -196,7 +210,22 @@ export default function DocumentVault({ docs = [], onAdd, onDelete, requireAuth 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "#111", borderBottom: "1px solid #333", flexShrink: 0 }}>
               <span style={{ fontSize: 13, color: "#ddd", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>{docViewer.name}</span>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <a href={docViewer.url} target="_blank" rel="noreferrer" style={{ background: "#2a6", color: "#fff", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontFamily: "Georgia,serif", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>⬇ Download</a>
+                <button
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem("estatepro_token") || "";
+                      const r = await fetch(`${API}/api/documents/${docViewer.did}/file?dl=1`, { headers: { Authorization: `Bearer ${token}` } });
+                      if (!r.ok) throw new Error();
+                      const blob = await r.blob();
+                      const blobUrl = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = blobUrl; a.download = docViewer.name;
+                      document.body.appendChild(a); a.click();
+                      document.body.removeChild(a); URL.revokeObjectURL(blobUrl);
+                    } catch { alert("Download failed — please try again."); }
+                  }}
+                  style={{ background: "#2a6", border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif" }}
+                >⬇ Download</button>
                 <button onClick={() => setDocViewer(null)} style={{ background: C.rose, border: "none", color: "#fff", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Georgia,serif", fontWeight: 700 }}>✕ Close</button>
               </div>
             </div>

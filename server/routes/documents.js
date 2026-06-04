@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import mongoose from 'mongoose';
 import { Readable } from 'stream';
+import jwt from 'jsonwebtoken';
 import Block from '../models/Block.js';
 import { txBlock, txDoc } from '../utils/transform.js';
 import { verifyJWT } from '../middleware/auth.js';
@@ -96,11 +97,19 @@ router.delete('/documents/:did', verifyJWT, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/documents/:did/file — redirect directly to the Cloudinary CDN URL.
-// Cloudinary CDN URLs are publicly accessible (no auth needed) as proven by
-// image <img src={doc.url}> working fine. No proxy, no transformations.
+// GET /api/documents/:did/file — sign a Cloudinary URL server-side and stream
+// the file back to the client. Accepts JWT via Authorization header OR ?token=
+// query param (needed for iframe src which can't send custom headers).
 router.get('/documents/:did/file', async (req, res, next) => {
   try {
+    // Verify JWT — accept from header or query param (for iframe)
+    const token = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.slice(7)
+      : req.query.token;
+    if (!token) return res.status(401).send('Unauthorized');
+    try { jwt.verify(token, process.env.JWT_SECRET); }
+    catch { return res.status(401).send('Invalid token'); }
+
     const block = await Block.findOne({
       'units.tenants.documents._id': new mongoose.Types.ObjectId(req.params.did),
     });
@@ -113,9 +122,31 @@ router.get('/documents/:did/file', async (req, res, next) => {
         if (d) { doc = d; break outer; }
       }
     }
-    if (!doc?.url) return res.status(404).send('No file stored');
+    if (!doc?.cloudinaryId) return res.status(404).send('No file stored');
 
-    return res.redirect(302, doc.url);
+    // Detect resource_type from the stored URL
+    const resourceType = doc.url?.includes('/video/') ? 'video'
+                       : doc.url?.includes('/image/') ? 'image'
+                       : 'raw';
+
+    // Generate a short-lived signed URL — bypasses any Cloudinary access restrictions
+    const signedUrl = cloudinary.url(doc.cloudinaryId, {
+      resource_type: resourceType,
+      sign_url: true,
+      expires_at: Math.floor(Date.now() / 1000) + 120, // 2 minutes
+    });
+
+    // Fetch file server-side and stream to client
+    const upstream = await fetch(signedUrl);
+    if (!upstream.ok) return res.status(502).send('Could not retrieve file from storage');
+
+    const dl = req.query.dl === '1';
+    const safeName = encodeURIComponent(doc.name || 'file');
+    res.setHeader('Content-Type', doc.mimeType || upstream.headers.get('content-type') || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `${dl ? 'attachment' : 'inline'}; filename="${safeName}"`);
+    res.setHeader('Cache-Control', 'private, max-age=120');
+
+    Readable.fromWeb(upstream.body).pipe(res);
   } catch (err) { next(err); }
 });
 

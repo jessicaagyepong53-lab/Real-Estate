@@ -508,7 +508,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
                     {isCurrent && (
                       <div style={{ background: C.tealBg, border: `1px solid ${C.teal}33`, borderRadius: 8, padding: "12px 14px", marginBottom: 14 }}>
                         <div style={{ fontSize: 11, color: C.teal, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>+ Record New Payment</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <div className="pay-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                           <div>
                             <label style={lSt}>Date</label>
                             <input type="date" style={iSt} value={newPayDate} onChange={(e) => setNewPayDate(e.target.value)} />

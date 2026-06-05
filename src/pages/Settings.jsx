@@ -257,7 +257,7 @@ export default function Settings({ requireAuth, isAuthenticated }) {
                 <div style={{ fontSize: 13, color: C.muted }}>Trash is empty.</div>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
+              <div className="tbl-wrap">
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
                   <thead>
                     <tr style={{ borderBottom: `2px solid ${C.borderLight}` }}>

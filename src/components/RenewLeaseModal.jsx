@@ -46,7 +46,7 @@ export default function RenewLeaseModal({ tenantName, currentLeaseEnd, currentMo
 
         {/* Dates */}
         <div style={{ fontSize: 11, color: C.teal, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>New Lease Period</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
+        <div className="renew-dates-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
           <div>
             <label style={lSt}>Start Date *</label>
             <input type="date" style={iSt} value={start} onChange={(e) => setStart(e.target.value)} />
@@ -59,7 +59,7 @@ export default function RenewLeaseModal({ tenantName, currentLeaseEnd, currentMo
 
         {/* Rent & Advance */}
         <div style={{ fontSize: 11, color: C.teal, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Rent & Advance</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
+        <div className="renew-dates-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
           <div>
             <label style={lSt}>Monthly Rent (GHS)</label>
             <input type="number" min="0" style={iSt} value={monthlyRent} onChange={(e) => setMonthlyRent(e.target.value)} placeholder="e.g. 2500" />
@@ -72,7 +72,7 @@ export default function RenewLeaseModal({ tenantName, currentLeaseEnd, currentMo
 
         {/* Deposit */}
         <div style={{ fontSize: 11, color: C.teal, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Security Deposit</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 8 }}>
+        <div className="renew-dates-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 8 }}>
           <div>
             <label style={lSt}>Deposit Amount (GHS)</label>
             <input type="number" min="0" style={iSt} value={depAmount} onChange={(e) => setDepAmount(e.target.value)} placeholder={rent > 0 ? `e.g. ${rent.toLocaleString()}` : "e.g. 2500"} />

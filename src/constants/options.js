@@ -54,6 +54,8 @@ export const PROF_FIELDS = [
   { label: "ID Type",         key: "idType"                           },
   { label: "ID Number",       key: "idNumber"                         },
   { label: "Move-in Date",    key: "moveInDate",       type: "date"  },
+  { label: "Lease Start",     key: "leaseStart",       type: "date"  },
+  { label: "Lease End",       key: "leaseEnd",         type: "date"  },
   { label: "Vehicles",        key: "vehicles"                         },
   { label: "Emergency Name",  key: "emergencyName"                    },
   { label: "Emergency Phone", key: "emergencyPhone"                   },

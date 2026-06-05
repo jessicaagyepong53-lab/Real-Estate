@@ -66,6 +66,16 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
   function handleSave() {
     const rent = Number(draft.monthlyRent) || 0;
     const adv  = Number(draft.advanceMonths) || 0;
+    // Date validation: leaseEnd must not be before leaseStart
+    if (draft.leaseStart && draft.leaseEnd && draft.leaseEnd < draft.leaseStart) {
+      toast("⚠️ Lease end date cannot be before the lease start date.", "error", 5000);
+      return;
+    }
+    // moveInDate should not be after leaseEnd
+    if (draft.moveInDate && draft.leaseEnd && draft.moveInDate > draft.leaseEnd) {
+      toast("⚠️ Move-in date cannot be after the lease end date.", "error", 5000);
+      return;
+    }
     const computed = rent > 0 ? { advanceAmount: adv * rent, depositAmount: rent, depositPaid: true } : {};
     onSave({ ...draft, ...computed, balanceOwed: Number(draft.balanceOwed) || 0, refundAmount: Number(draft.refundAmount) || 0 });
     setEditing(false);

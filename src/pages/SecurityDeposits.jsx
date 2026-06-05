@@ -20,11 +20,17 @@ export default function SecurityDeposits({ allUnits, occupiedUnits, activeTenant
 
   const activeRows = allUnits.filter((u) => u.tenants.some((t) => t.leaseStatus === "active"));
 
-  // Past tenant rows: ended/cancelled tenants who had a deposit recorded
+  // Past tenant rows: ended/cancelled tenants who had a deposit, plus lease history periods
   const pastDepRows = allUnits.flatMap((u) =>
-    u.tenants
-      .filter((t) => t.leaseStatus !== "active" && (Number(t.depositAmount) > 0 || t.depositPaid))
-      .map((t) => ({ unit: u, tenant: t }))
+    u.tenants.flatMap((t) => {
+      const mainRows = t.leaseStatus !== "active" && (Number(t.depositAmount) > 0 || t.depositPaid)
+        ? [{ unit: u, tenant: t }]
+        : [];
+      const histRows = (t.leaseHistory || [])
+        .filter((h) => Number(h.depositAmount) > 0 || h.depositPaid)
+        .map((h, hi) => ({ unit: u, tenant: { ...h, name: t.name, tid: `${t.tid}-h${hi}`, leaseStatus: 'ended' } }));
+      return [...mainRows, ...histRows];
+    })
   );
 
   // Get depositPaid with optimistic local override

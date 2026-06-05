@@ -73,7 +73,24 @@ export default function App() {
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const allUnits = blocks.flatMap((b) => b.units.map((u) => ({ ...u, blockId: b.bid, blockName: b.name })));
-  const allTenants = allUnits.flatMap((u) => u.tenants.map((t) => ({ ...t, unitId: u.uid, unitName: u.name, blockName: u.blockName, monthlyRent: u.monthlyRent })));
+  // Expand each tenant's leaseHistory into virtual past-tenant entries so all pages see renewed periods
+  const allTenants = allUnits.flatMap((u) => u.tenants.flatMap((t) => {
+    const base = { ...t, unitId: u.uid, unitName: u.name, blockName: u.blockName, monthlyRent: Number(t.monthlyRent) || u.monthlyRent || 0 };
+    const history = (t.leaseHistory || []).map((h, i) => ({
+      ...h,
+      tid: `${t.tid}-h${i}`,
+      name: t.name,
+      leaseStatus: 'ended',
+      cancelDate: h.leaseEnd || null,
+      payments: [],
+      refundAmount: 0,
+      leaseHistory: [],
+      unitId: u.uid,
+      unitName: u.name,
+      blockName: u.blockName,
+    }));
+    return [base, ...history];
+  }));
   // Use getLeaseStatus so tenants with a past leaseEnd are treated as expired, not active
   const activeTenants  = allTenants.filter((t) => getLeaseStatus(t) === "active");
   // occupied = has a tenant whose DB status is 'active' (includes expired-but-still-in)
@@ -81,8 +98,11 @@ export default function App() {
   const expiredUnits   = allUnits.filter((u) => u.tenants.some((t) => t.leaseStatus === "active" && t.leaseEnd && new Date(t.leaseEnd) < today));
   // Monthly revenue = sum of all active tenants' rent (including expired leases still occupying)
   const totalRev          = occupiedUnits.reduce((s, u) => { const a = u.tenants.find((t) => t.leaseStatus === "active"); return s + (a ? (Number(a.monthlyRent) || u.monthlyRent) : 0); }, 0);
-  // All-time monthly rent total = every tenant (past + active) summed
-  const totalMonthlyRent  = allUnits.reduce((s, u) => s + u.tenants.reduce((ts, t) => ts + (Number(t.monthlyRent) || u.monthlyRent || 0), 0), 0);
+  // All-time monthly rent total = every tenant (past + active) including all renewal periods
+  const totalMonthlyRent  = allUnits.reduce((s, u) => s + u.tenants.reduce((ts, t) => {
+    const histRents = (t.leaseHistory || []).reduce((hs, h) => hs + (Number(h.monthlyRent) || 0), 0);
+    return ts + (Number(t.monthlyRent) || u.monthlyRent || 0) + histRents;
+  }, 0), 0);
   const allYears       = [...new Set(allTenants.flatMap((t) => [yr(t.leaseStart), yr(t.leaseEnd), yr(t.cancelDate)]).filter(Boolean))].sort();
   const reminderUnits  = allUnits.filter((u) => { const a = u.tenants.find((t) => getLeaseStatus(t) === "active"); return a && daysUntil(a.leaseEnd) !== null && daysUntil(a.leaseEnd) <= 90; });
   const dueSoonCount   = allUnits.filter((u) => { const a = u.tenants.find((t) => getLeaseStatus(t) === "active"); const d = a ? daysUntil(a.leaseEnd) : null; return d !== null && d >= 0 && d <= 30; }).length;

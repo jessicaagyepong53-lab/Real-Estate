@@ -44,9 +44,15 @@ export default function Dashboard({ totalRev, totalMonthlyRent, occupiedUnits, a
     const maintCost = maint.filter((m) => m.unitId === u.uid).reduce((s, m) => s + (m.cost || 0), 0);
     const rentPaid  = u.tenants.reduce((s, t) => {
       const logTotal = (t.payments || []).reduce((ps, p) => ps + (Number(p.amount) || 0), 0);
-      return s + Math.max(0, (logTotal > 0 ? logTotal : (Number(t.advanceAmount) > 0 ? Number(t.advanceAmount) : 0)) - (Number(t.refundAmount) || 0));
+      const current  = Math.max(0, (logTotal > 0 ? logTotal : (Number(t.advanceAmount) > 0 ? Number(t.advanceAmount) : 0)) - (Number(t.refundAmount) || 0));
+      const histPaid = (t.leaseHistory || []).reduce((hs, h) => hs + (Number(h.advanceAmount) || 0), 0);
+      return s + current + histPaid;
     }, 0);
-    const depPaid   = u.tenants.reduce((s, t) => s + (t.depositPaid ? (t.depositAmount != null ? Number(t.depositAmount) : u.monthlyRent) : 0), 0);
+    const depPaid   = u.tenants.reduce((s, t) => {
+      const cur  = t.depositPaid ? (t.depositAmount != null ? Number(t.depositAmount) : u.monthlyRent) : 0;
+      const hist = (t.leaseHistory || []).reduce((hs, h) => hs + (h.depositPaid ? (Number(h.depositAmount) || 0) : 0), 0);
+      return s + cur + hist;
+    }, 0);
     return { rentPaid: acc.rentPaid + rentPaid, depPaid: acc.depPaid + depPaid, maintCost: acc.maintCost + maintCost };
   }, { rentPaid: 0, depPaid: 0, maintCost: 0 });
 
@@ -149,7 +155,19 @@ export default function Dashboard({ totalRev, totalMonthlyRent, occupiedUnits, a
                     <td style={td} /><td style={td} /><td style={td} /><td style={td} /><td style={td} />
                   </tr>
                 )];
-                return u.tenants.map((t, i) => {
+                // Expand tenant + all lease history periods into rows
+                const allPeriods = u.tenants.flatMap((t) => [
+                  t,
+                  ...(t.leaseHistory || []).map((h, hi) => ({
+                    ...h,
+                    tid: `${t.tid}-h${hi}`,
+                    name: t.name,
+                    leaseStatus: 'ended',
+                    payments: [],
+                    refundAmount: 0,
+                  }))
+                ]);
+                return allPeriods.map((t, i) => {
                   const isActive = t.leaseStatus === "active";
                   const logTotal = (t.payments || []).reduce((ps, p) => ps + (Number(p.amount) || 0), 0);
                   const rentPaid = Math.max(0,
@@ -188,7 +206,10 @@ export default function Dashboard({ totalRev, totalMonthlyRent, occupiedUnits, a
               <tfoot>
                 <tr style={{ background: C.panel }}>
                   <td style={{ ...td, fontWeight: 700, color: C.text }} colSpan={2}>Totals</td>
-                  <td style={{ ...td, fontWeight: 700 }}>{fmt(scopeUnits.reduce((s, u) => s + u.tenants.reduce((ts, t) => ts + (Number(t.monthlyRent) || u.monthlyRent || 0), 0), 0))}</td>
+                  <td style={{ ...td, fontWeight: 700 }}>{fmt(scopeUnits.reduce((s, u) => s + u.tenants.reduce((ts, t) => {
+                    const histRents = (t.leaseHistory || []).reduce((hs, h) => hs + (Number(h.monthlyRent) || 0), 0);
+                    return ts + (Number(t.monthlyRent) || u.monthlyRent || 0) + histRents;
+                  }, 0), 0))}</td>
                   <td style={{ ...td, fontWeight: 700, color: C.teal }}>{fmt(scopeTotals.rentPaid)}</td>
                   <td style={{ ...td, fontWeight: 700, color: C.gold }}>{fmt(scopeTotals.depPaid)}</td>
                   <td style={{ ...td, fontWeight: 700 }}>{fmt(scopeTotals.rentPaid + scopeTotals.depPaid)}</td>

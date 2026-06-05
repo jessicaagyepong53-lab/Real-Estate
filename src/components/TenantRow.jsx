@@ -297,22 +297,23 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
                           <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "5px 20px", fontSize: 13 }}>
                             <span style={{ color: C.muted }}>Monthly Rent</span>
                             <span style={{ fontWeight: 600, color: C.text, textAlign: "right" }}>GHS {rent.toLocaleString()}/mo</span>
-                            {adv > 0 && <><span style={{ color: C.muted }}>Advance Paid ({monthsPaid} of {adv} month{adv !== 1 ? "s" : ""})</span><span style={{ fontWeight: 600, color: C.text, textAlign: "right" }}>GHS {rentReceived.toLocaleString()}</span></>}
+                            {adv > 0 && !hasLog && <><span style={{ color: C.muted }}>Advance Paid ({monthsPaid} of {adv} month{adv !== 1 ? "s" : ""})</span><span style={{ fontWeight: 600, color: C.text, textAlign: "right" }}>GHS {rentReceived.toLocaleString()}</span></>}
                             {secDep > 0 && <><span style={{ color: C.muted }}>Security Deposit (1 month)</span><span style={{ fontWeight: 600, color: C.text, textAlign: "right" }}>{t.depositPaid ? "✓ " : "✗ "}GHS {secDep.toLocaleString()}</span></>}
-                            {adv > 0 && <>
+                            {adv > 0 && !hasLog && <>
                               <span style={{ color: C.teal, fontWeight: 700, borderTop: `1px solid ${C.teal}33`, paddingTop: 5 }}>Total Expected</span>
                               <span style={{ color: C.teal, fontWeight: 700, textAlign: "right", borderTop: `1px solid ${C.teal}33`, paddingTop: 5 }}>GHS {total.toLocaleString()}</span>
                             </>}
-                            {balance > 0 && <><span style={{ color: C.rose, fontWeight: 700 }}>Balance Owed</span><span style={{ color: C.rose, fontWeight: 700, textAlign: "right" }}>GHS {balance.toLocaleString()}</span></>}
-                            {balance > 0 && <><span style={{ color: C.sage, fontWeight: 700 }}>Amount Received</span><span style={{ color: C.sage, fontWeight: 700, textAlign: "right" }}>GHS {received.toLocaleString()}</span></>}
+                            {!hasLog && balance > 0 && <><span style={{ color: C.rose, fontWeight: 700 }}>Balance Owed</span><span style={{ color: C.rose, fontWeight: 700, textAlign: "right" }}>GHS {balance.toLocaleString()}</span></>}
+                            {!hasLog && balance > 0 && <><span style={{ color: C.sage, fontWeight: 700 }}>Amount Received</span><span style={{ color: C.sage, fontWeight: 700, textAlign: "right" }}>GHS {received.toLocaleString()}</span></>}
                             {t.lastPaymentDate && !hasLog && <><span style={{ color: C.muted }}>Last Payment</span><span style={{ color: C.sage, textAlign: "right" }}>GHS {(Number(t.lastPaymentAmount)||0).toLocaleString()} — {t.lastPaymentDate}</span></>}
                             {hasLog && <>
                               <span
                                 style={{ color: C.sky, fontWeight: 700, borderTop: `1px solid ${C.sky}33`, paddingTop: 5, cursor: "pointer" }}
                                 onClick={() => setActiveTab("payments")}
-                              >💰 Payment Log ({localPayments.length})</span>
+                              >💰 Total Paid ({localPayments.length} payment{localPayments.length !== 1 ? "s" : ""})</span>
                               <span style={{ color: C.sky, fontWeight: 700, textAlign: "right", borderTop: `1px solid ${C.sky}33`, paddingTop: 5 }}>GHS {logTotal.toLocaleString()}</span>
                             </>}
+                            {hasLog && balance > 0 && <><span style={{ color: C.rose, fontWeight: 700 }}>Balance Still Owed</span><span style={{ color: C.rose, fontWeight: 700, textAlign: "right" }}>GHS {balance.toLocaleString()}</span></>}
                             {Number(t.refundAmount) > 0 && <><span style={{ color: C.amber, fontWeight: 700, borderTop: `1px solid ${C.amber}33`, paddingTop: 5 }}>⛔ Refund Paid Out</span><span style={{ color: C.amber, fontWeight: 700, textAlign: "right", borderTop: `1px solid ${C.amber}33`, paddingTop: 5 }}>− GHS {Number(t.refundAmount).toLocaleString()}</span></>}
                           </div>
                         </div>

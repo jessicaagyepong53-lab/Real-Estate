@@ -216,6 +216,8 @@ router.post('/tenants/:tid/payments', verifyJWT, async (req, res, next) => {
     const { amount, date, note } = req.body;
     if (!amount || !date) return res.status(400).json({ error: 'amount and date are required' });
     tenant.payments.push({ amount: Number(amount), date, note: note || '' });
+    // Auto-reduce balanceOwed by the payment amount (floor at 0)
+    tenant.balanceOwed = Math.max(0, (Number(tenant.balanceOwed) || 0) - Number(amount));
     // Keep lastPaymentDate / lastPaymentAmount in sync with most recent entry
     const sorted = [...tenant.payments].sort((a, b) => (a.date > b.date ? -1 : 1));
     tenant.lastPaymentAmount = sorted[0].amount;
@@ -236,6 +238,10 @@ router.delete('/tenants/:tid/payments/:pid', verifyJWT, async (req, res, next) =
       tenant = unit.tenants.id(req.params.tid);
       if (tenant) break;
     }
+    const removedPayment = tenant.payments.id(req.params.pid);
+    if (!removedPayment) return res.status(404).json({ error: 'Payment not found' });
+    // Restore balanceOwed by the removed payment amount
+    tenant.balanceOwed = (Number(tenant.balanceOwed) || 0) + Number(removedPayment.amount);
     tenant.payments.pull(req.params.pid);
     // Re-sync lastPaymentDate / lastPaymentAmount
     if (tenant.payments.length > 0) {

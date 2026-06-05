@@ -206,10 +206,7 @@ export default function Dashboard({ totalRev, totalMonthlyRent, occupiedUnits, a
               <tfoot>
                 <tr style={{ background: C.panel }}>
                   <td style={{ ...td, fontWeight: 700, color: C.text }} colSpan={2}>Totals</td>
-                  <td style={{ ...td, fontWeight: 700 }}>{fmt(scopeUnits.reduce((s, u) => s + u.tenants.reduce((ts, t) => {
-                    const histRents = (t.leaseHistory || []).reduce((hs, h) => hs + (Number(h.monthlyRent) || 0), 0);
-                    return ts + (Number(t.monthlyRent) || u.monthlyRent || 0) + histRents;
-                  }, 0), 0))}</td>
+                  <td style={{ ...td, fontWeight: 700 }}>{fmt(scopeUnits.reduce((s, u) => s + u.tenants.reduce((ts, t) => ts + (Number(t.monthlyRent) || u.monthlyRent || 0), 0), 0))}</td>
                   <td style={{ ...td, fontWeight: 700, color: C.teal }}>{fmt(scopeTotals.rentPaid)}</td>
                   <td style={{ ...td, fontWeight: 700, color: C.gold }}>{fmt(scopeTotals.depPaid)}</td>
                   <td style={{ ...td, fontWeight: 700 }}>{fmt(scopeTotals.rentPaid + scopeTotals.depPaid)}</td>

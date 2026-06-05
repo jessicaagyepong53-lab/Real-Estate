@@ -24,7 +24,7 @@ export default function UnitPanel({ unit, requireAuth, onEndLease, onTerminateLe
 
 
   const active    = unit.tenants.filter((t) => t.leaseStatus === "active").slice(-1)[0];
-  const past       = unit.tenants.filter((t) => t.leaseStatus !== "active");
+  const past       = unit.tenants.filter((t) => t.tid !== active?.tid);
   const isExpired  = active ? getLeaseStatus(active) === 'expired' : false;
   const rs         = active && !isExpired ? getReminderStatus(active.leaseEnd) : null;
 

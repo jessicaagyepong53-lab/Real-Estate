@@ -103,7 +103,7 @@ export default function UnitPanel({ unit, requireAuth, onEndLease, onTerminateLe
               t={active}
               isCurrent
               requireAuth={requireAuth}
-              onEndLease={(tid, reason, endDate) => onEndLease(unit.uid, tid, reason, endDate)}
+              onEndLease={(tid, reason, endDate, refundAmount) => onEndLease(unit.uid, tid, reason, endDate, refundAmount)}
               onTerminateLease={(tid, reason, endDate, refundAmount) => onTerminateLease(unit.uid, tid, reason, endDate, refundAmount)}
               onSave={(u) => onSaveTenant(unit.uid, u)}
               onRenew={onRenew}

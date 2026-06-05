@@ -81,7 +81,7 @@ export default function TenantRow({ t, isCurrent, requireAuth, onEndLease, onTer
     setEditing(false);
     toast("Profile saved.", "save");
   }
-  function handleEndLease(reason, endDate) { onEndLease(t.tid, reason, endDate); setShowEndModal(false); }
+  function handleEndLease(reason, endDate, refundAmount) { onEndLease(t.tid, reason, endDate, refundAmount); setShowEndModal(false); }
   function handleTerminateLease(reason, endDate, refundAmount) { onTerminateLease(t.tid, reason, endDate, refundAmount); setShowTerminateModal(false); }
 
   async function handleAddPayment() {

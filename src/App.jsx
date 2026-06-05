@@ -134,15 +134,17 @@ export default function App() {
   });
 
   // ── Actions ─────────────────────────────────────────────────────────────────
-  async function endLease(unitId, tid, reason, endDate) {
+  async function endLease(unitId, tid, reason, endDate, refundAmount) {
     const block = await apiUpdateTenant(tid, {
       leaseStatus: "ended",
       cancelReason: reason,
       cancelDate: endDate || today.toISOString().slice(0, 10),
       leaseEnd: endDate || undefined,
+      refundAmount: Number(refundAmount) || 0,
     });
     setBlocks((prev) => prev.map((b) => b.bid === block.bid ? block : b));
-    toast("Lease ended successfully.", "lease");
+    const refund = Number(refundAmount) || 0;
+    toast(`Lease ended successfully.${refund > 0 ? ` GHS ${refund.toLocaleString()} refund recorded.` : ""}`, "lease");
   }
 
   async function terminateLease(unitId, tid, reason, endDate, refundAmount) {

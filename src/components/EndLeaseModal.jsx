@@ -5,8 +5,9 @@ import { today } from "../utils/helpers";
 import Btn from "./ui/Btn";
 
 export default function EndLeaseModal({ tenantName, onConfirm, onClose }) {
-  const [reason, setReason] = useState("");
+  const [reason,       setReason]       = useState("");
   const [leaseEndDate, setLeaseEndDate] = useState(today.toISOString().slice(0, 10));
+  const [refundAmt,    setRefundAmt]    = useState("");
 
   return (
     <div
@@ -24,6 +25,16 @@ export default function EndLeaseModal({ tenantName, onConfirm, onClose }) {
           <input type="date" style={iSt} value={leaseEndDate} onChange={(e) => setLeaseEndDate(e.target.value)} />
         </div>
 
+        <div style={{ marginBottom: 14 }}>
+          <label style={lSt}>Refund paid to tenant (GHS) — leave blank if none</label>
+          <input
+            type="number" min="0" style={iSt}
+            placeholder="0"
+            value={refundAmt}
+            onChange={(e) => setRefundAmt(e.target.value)}
+          />
+        </div>
+
         <div style={{ marginBottom: 20 }}>
           <label style={lSt}>Reason for ending lease *</label>
           <textarea
@@ -38,7 +49,7 @@ export default function EndLeaseModal({ tenantName, onConfirm, onClose }) {
           <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
           <Btn
             variant="danger"
-            onClick={() => { if (!reason.trim()) return; onConfirm(reason.trim(), leaseEndDate); }}
+            onClick={() => { if (!reason.trim()) return; onConfirm(reason.trim(), leaseEndDate, Number(refundAmt) || 0); }}
             style={{ opacity: reason.trim() ? 1 : 0.5 }}
           >
             ✓ End Lease
